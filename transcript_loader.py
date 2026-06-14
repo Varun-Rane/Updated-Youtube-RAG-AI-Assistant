@@ -85,7 +85,7 @@ def _chunk_from_lines(video, lines, chunk_index):
     }
 
 
-def build_transcript_chunks(video, chunk_size, chunk_overlap):
+def build_transcript_chunks(video, chunk_size=800, chunk_overlap=200):
     chunks = []
     current_lines = []
     current_length = 0

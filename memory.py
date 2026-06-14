@@ -79,49 +79,101 @@ def history_text(messages, max_messages=5, max_chars=3000):
 
 
 def is_memory_query(question):
-    lowered = question.lower()
-    return any(hint in lowered for hint in MEMORY_HINTS)
+    q = question.lower()
+    return any(hint in q for hint in MEMORY_HINTS
+    )
 
 
 def _user_questions(messages):
     return [message["content"] for message in messages if message.get("role") == "user"]
 
 
-def answer_memory_question(question, messages, chat_model=None, settings=None):
-    user_questions = _user_questions(messages)
-    lowered = question.lower()
+def answer_memory_question(
 
-    if "first question" in lowered:
+    question,
+
+    messages,
+
+    chat_model=None,
+
+    settings=None,
+
+):
+
+    q = question.lower()
+
+    user_questions = [
+
+        m["content"]
+
+        for m in messages
+
+        if m["role"]=="user"
+
+    ]
+
+    if "first question" in q:
+
         if user_questions:
-            return f"Your first question was:\n\n{user_questions[0]}"
-        return "You have not asked a previous question yet."
 
-    if "second question" in lowered:
-        if len(user_questions) >= 2:
-            return f"Your second question was:\n\n{user_questions[1]}"
-        return "You have not asked a second question yet."
+            return user_questions[0]
 
-    if "last question" in lowered or "previous question" in lowered:
+        return "No previous question."
+
+    if "second question" in q:
+
+        if len(user_questions)>=2:
+
+            return user_questions[1]
+
+        return "Second question not found."
+
+    if "last question" in q:
+
         if user_questions:
-            return f"Your previous question was:\n\n{user_questions[-1]}"
-        return "You have not asked a previous question yet."
 
-    if "questions i asked" in lowered or "what did i ask" in lowered:
-        if not user_questions:
-            return "You have not asked any previous questions yet."
-        return "Questions you have asked:\n\n" + "\n".join(
-            f"{index}. {item}" for index, item in enumerate(user_questions, start=1)
+            return user_questions[-1]
+
+        return "No previous question."
+
+    if "questions i asked" in q:
+
+        return "\n".join(
+
+            f"{i+1}. {x}"
+
+            for i,x in enumerate(
+
+                user_questions
+
+            )
+
         )
 
     if chat_model and settings:
-        prompt = MEMORY_PROMPT.format(
-            history=history_text(
-                messages,
-                max_messages=settings.max_history_messages,
-                max_chars=settings.max_history_chars,
-            ),
-            question=question,
-        )
-        return invoke_text(chat_model, prompt)
 
-    return "I could not find that in our previous conversation."
+        prompt = MEMORY_PROMPT.format(
+
+            history=history_text(
+
+                messages,
+
+                max_messages=settings.max_history_messages,
+
+                max_chars=settings.max_history_chars,
+
+            ),
+
+            question=question,
+
+        )
+
+        return invoke_text(
+
+            chat_model,
+
+            prompt,
+
+        )
+
+    return "I don't remember that."

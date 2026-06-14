@@ -39,43 +39,86 @@ def inject_styles():
 
 
 def render_loader_panel(settings):
-    with st.sidebar:
-        st.header("Transcript Index")
-        raw_urls = st.text_area(
-            "YouTube URLs",
-            placeholder="https://www.youtube.com/watch?v=...\nhttps://youtu.be/...",
-            height=140,
-            help="Paste one URL per line. All transcripts are indexed into one FAISS DB.",
+
+    st.subheader("📥 Load YouTube Videos")
+
+    raw_urls = st.text_area(
+
+        "Paste one or more YouTube URLs",
+
+        height=120,
+
+        placeholder="""
+https://youtu.be/xxxx
+
+https://youtu.be/yyyy
+""",
+
+    )
+
+    c1,c2 = st.columns(2)
+
+    with c1:
+
+        load_clicked = st.button(
+
+            "🚀 Load Videos",
+
+            use_container_width=True,
+
         )
 
-        col_load, col_clear = st.columns(2)
-        with col_load:
-            load_clicked = st.button("Load", use_container_width=True)
-        with col_clear:
-            clear_clicked = st.button("Clear", use_container_width=True)
+    with c2:
 
-        st.divider()
-        st.caption("Settings")
-        st.write(f"LLM: `{settings.llm_repo_id}`")
-        st.write(f"Embeddings: `{settings.embedding_model}`")
-        st.write(f"Top-k: `{settings.top_k}`")
+        clear_clicked = st.button(
 
-    return raw_urls, load_clicked, clear_clicked
+            "🗑 Clear",
 
+            use_container_width=True,
+
+        )
+
+    st.caption(
+
+        f"""
+
+LLM : {settings.llm_repo_id}
+
+Embeddings : {settings.embedding_model}
+
+Top-K : {settings.top_k}
+
+"""
+
+    )
+
+    return raw_urls,load_clicked,clear_clicked
 
 def render_loaded_videos(videos):
+
     if not videos:
-        st.info("Load one or more YouTube transcripts, or ask a general question.")
+
         return
 
-    with st.container(border=True):
-        st.subheader("Loaded Videos")
-        for video in videos:
-            st.markdown(
-                f"**{video['label']}** - {video['video_title']}  \n"
-                f"{video['video_url']}"
-            )
+    st.divider()
 
+    st.subheader("🎬 Loaded Videos")
+
+    for video in videos:
+
+        st.markdown(
+
+            f"""
+
+**{video["label"]}**
+
+{video["video_title"]}
+
+{video["video_url"]}
+
+"""
+
+        )
 
 def render_quick_prompts():
     prompts = [

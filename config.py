@@ -1,9 +1,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-
 from dotenv import dotenv_values
-
 
 BASE_DIR = Path(__file__).resolve().parent
 LOCAL_ENV = dotenv_values(BASE_DIR / ".env")
@@ -104,7 +102,7 @@ def load_settings():
         chunk_size=_int_env("CHUNK_SIZE", 1500),
         chunk_overlap=_int_env("CHUNK_OVERLAP", 300),
         top_k=_int_env("TOP_K", 5),
-        max_context_chars=_int_env("MAX_CONTEXT_CHARS", 12000),
+        max_context_chars=_int_env("MAX_CONTEXT_CHARS", 2500),
         max_history_messages=_int_env("MAX_HISTORY_MESSAGES", 8),
         max_history_chars=_int_env("MAX_HISTORY_CHARS", 3000),
         max_new_tokens=_int_env("MAX_NEW_TOKENS", 700),

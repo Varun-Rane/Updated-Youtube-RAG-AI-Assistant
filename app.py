@@ -1,5 +1,4 @@
 import streamlit as st
-
 from config import load_settings
 from llm import get_chat_model, get_embeddings
 from memory import (
@@ -10,7 +9,7 @@ from memory import (
     is_memory_query,
     save_messages,
 )
-from rag import run_general, run_rag
+from rag import run_rag
 from router import classify_query
 from transcript_loader import load_transcripts
 from ui import (
@@ -54,49 +53,136 @@ def load_video_index(raw_urls, settings):
 
 
 def answer_question(question, settings, history_before):
-    if not settings.hf_api_key:
+
+    if not settings.hf_api_key and not settings.groq_api_key:
         return {
             "mode": "ERROR",
-            "answer": "HF_API_KEY is missing. Add it to youtube-rag-ai-assistant/.env.",
+            "answer": "No LLM API key found.",
             "timestamps": [],
             "source_videos": [],
             "retrieved_chunks": [],
         }
 
     chat_model = get_chat_model(settings)
+
     history = history_text(
         history_before,
         max_messages=settings.max_history_messages,
         max_chars=settings.max_history_chars,
     )
 
-    if is_memory_query(question):
-        return {
-            "mode": "MEMORY",
-            "answer": answer_memory_question(question, history_before, chat_model, settings),
-            "timestamps": [],
-            "source_videos": [],
-            "retrieved_chunks": [],
-        }
-
     route = classify_query(
         question=question,
-        chat_model=chat_model,
-        has_loaded_videos=bool(st.session_state.get("retriever")),
+        has_loaded_videos=bool(
+            st.session_state.get("retriever")
+        ),
     )
 
-    if route == "RAG":
-        return run_rag(
+    print(f"ROUTE -> {route}")
+
+    # -------------------------
+    # MEMORY
+    # -------------------------
+
+    if route == "MEMORY":
+
+        return {
+
+            "mode": "MEMORY",
+
+            "answer": answer_memory_question(
+
+                question,
+
+                history_before,
+
+                chat_model,
+
+                settings,
+
+            ),
+
+            "timestamps": [],
+
+            "source_videos": [],
+
+            "retrieved_chunks": [],
+
+        }
+
+    # -------------------------
+    # VIDEO SUMMARY
+    # -------------------------
+
+    if route == "VIDEO_SUMMARY":
+
+        from summary import run_summary
+
+        return run_summary(
+
             question=question,
-            retriever=st.session_state.get("retriever"),
-            videos=st.session_state.get("videos", []),
-            history=history,
+
+            videos=st.session_state.get(
+
+                "videos",
+
+                [],
+
+            ),
+
             chat_model=chat_model,
+
             settings=settings,
+
         )
 
-    return run_general(question=question, history=history, chat_model=chat_model)
+    # -------------------------
+    # GENERAL
+    # -------------------------
 
+    if route == "GENERAL":
+
+        from general import run_general
+
+        return run_general(
+
+            question=question,
+
+            history=history,
+
+            chat_model=chat_model,
+
+        )
+
+    # -------------------------
+    # VIDEO QA
+    # -------------------------
+
+    return run_rag(
+
+        question=question,
+
+        retriever=st.session_state.get(
+
+            "retriever"
+
+        ),
+
+        videos=st.session_state.get(
+
+            "videos",
+
+            [],
+
+        ),
+
+        history=history,
+
+        chat_model=chat_model,
+
+        settings=settings,
+
+    )
 
 def handle_question(question, settings):
     history_before = list(st.session_state.messages)
