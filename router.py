@@ -1,86 +1,44 @@
-MEMORY_HINTS = (
-    "my name",
-    "who am i",
-    "what is my name",
-    "remember",
-    "previous question",
-    "last question",
-    "first question",
-    "second question",
-    "history",
-    "conversation",
-    "did i ask",
-    "what did i ask",
-    "questions i asked",
-)
+from llm import invoke_text
+from prompts import CLASSIFIER_PROMPT
 
-SUMMARY_HINTS = (
-    "summary",
-    "summarize",
-    "video about",
-    "what is the video about",
-    "overview",
-    "generate notes",
-    "notes",
-    "timeline",
-    "chapters",
-    "key moments",
-    "main points",
-    "questions discussed",
-    "list questions",
-)
-
-GENERAL_HINTS = (
-    "python",
-    "java",
-    "c++",
-    "cpp",
-    "javascript",
-    "html",
-    "css",
-    "sql",
-    "react",
-    "node",
-    "django",
-    "flask",
-    "fastapi",
-    "leetcode",
-    "algorithm",
-    "binary search",
-    "linked list",
-    "tree",
-    "graph",
-    "stack",
-    "queue",
-    "dynamic programming",
-    "resume",
-    "linkedin",
-    "cover letter",
-    "email",
-    "essay",
-    "joke",
-    "code",
-    "program",
-    "fibonacci",
-)
+VALID_ROUTES = {
+    "MEMORY",
+    "GENERAL",
+    "VIDEO_QA",
+    "VIDEO_SUMMARY",
+    "VIDEO_TASK",
+}
 
 
 def classify_query(
     question,
-    chat_model=None,
+    chat_model,
     has_loaded_videos=False,
 ):
+    prompt = CLASSIFIER_PROMPT.format(
+        question=question
+    )
 
-    q = question.lower()
+    try:
+        result = invoke_text(
+            chat_model,
+            prompt,
+        ).strip().upper()
 
-    if any(x in q for x in MEMORY_HINTS):
-        return "MEMORY"
+        result = result.split()[0]
 
-    if any(x in q for x in SUMMARY_HINTS):
-        return "VIDEO_SUMMARY"
+        if result in VALID_ROUTES:
 
-    if any(x in q for x in GENERAL_HINTS):
-        return "GENERAL"
+            if (
+                result.startswith("VIDEO")
+                and not has_loaded_videos
+            ):
+                return "GENERAL"
+
+            return result
+
+    except Exception:
+        pass
 
     if has_loaded_videos:
         return "VIDEO_QA"

@@ -20,15 +20,12 @@ def _env(name, default=""):
         ROOT_ENV.get(name),
         default,
     ]
-
     for candidate in candidates:
         if candidate is None:
             continue
-
         value = str(candidate).strip()
         if value and value not in PLACEHOLDER_VALUES:
             return value
-
     return default
 
 
@@ -99,14 +96,14 @@ def load_settings():
             "EMBEDDING_MODEL",
             "sentence-transformers/all-MiniLM-L6-v2",
         ),
-        chunk_size=_int_env("CHUNK_SIZE", 1500),
-        chunk_overlap=_int_env("CHUNK_OVERLAP", 300),
-        top_k=_int_env("TOP_K", 5),
-        max_context_chars=_int_env("MAX_CONTEXT_CHARS", 2500),
-        max_history_messages=_int_env("MAX_HISTORY_MESSAGES", 8),
-        max_history_chars=_int_env("MAX_HISTORY_CHARS", 3000),
-        max_new_tokens=_int_env("MAX_NEW_TOKENS", 700),
-        temperature=_float_env("TEMPERATURE", 0.3),
+        chunk_size=_int_env("CHUNK_SIZE", 1000),       # smaller = more precise retrieval
+        chunk_overlap=_int_env("CHUNK_OVERLAP", 200),
+        top_k=_int_env("TOP_K", 6),                    # fetch more chunks for detail
+        max_context_chars=_int_env("MAX_CONTEXT_CHARS", 3500),  # more context = better answers
+        max_history_messages=_int_env("MAX_HISTORY_MESSAGES", 6),
+        max_history_chars=_int_env("MAX_HISTORY_CHARS", 2000),
+        max_new_tokens=_int_env("MAX_NEW_TOKENS", 900),  # longer answers for notes
+        temperature=_float_env("TEMPERATURE", 0.2),      # lower = more factual
         transcript_languages=languages or ("en",),
         fetch_video_titles=_bool_env("FETCH_VIDEO_TITLES", True),
         memory_file=BASE_DIR / ".youtube_rag_memory.json",

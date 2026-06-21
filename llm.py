@@ -1,3 +1,4 @@
+import time
 from functools import lru_cache
 
 from langchain_huggingface import (
@@ -8,6 +9,9 @@ from langchain_huggingface import (
 )
 
 from utils import extract_llm_text
+
+# Hard cap on prompt size — prevents Groq 413 token errors
+MAX_PROMPT_CHARS = 10000  # ~2500 tokens, safe for Groq 6k TPM
 
 
 class LLMProviderError(RuntimeError):
@@ -28,7 +32,6 @@ def _cached_hf_chat_model(api_key, repo_id, max_new_tokens, temperature):
 @lru_cache(maxsize=8)
 def _cached_groq_chat_model(api_key, model, max_new_tokens, temperature):
     from langchain_groq import ChatGroq
-
     return ChatGroq(
         api_key=api_key,
         model=model,
@@ -58,9 +61,8 @@ def _chat_provider(settings):
 
 def _hf_credit_message():
     return (
-        "HuggingFace Inference credits are depleted, so the hosted LLM cannot "
-        "answer right now. Add prepaid HuggingFace credits, or set "
-        "LLM_PROVIDER=groq and GROQ_API_KEY in youtube-rag-ai-assistant/.env."
+        "HuggingFace Inference credits are depleted. Add prepaid HuggingFace credits, "
+        "or set LLM_PROVIDER=groq and GROQ_API_KEY in .env."
     )
 
 
@@ -75,16 +77,34 @@ def _is_hf_credit_error(exc):
     )
 
 
+def _is_rate_limit_error(exc):
+    message = str(exc).lower()
+    return (
+        "429" in message
+        or "rate limit" in message
+        or "rate_limit_exceeded" in message
+        or "tokens per minute" in message
+    )
+
+
+def _extract_retry_seconds(exc):
+    """Try to parse 'Please try again in Xs' from the error message."""
+    import re
+    message = str(exc)
+    match = re.search(r"try again in ([0-9.]+)s", message)
+    if match:
+        return min(float(match.group(1)) + 2, 60)  # add 2s buffer, cap at 60s
+    return 20  # default wait
+
+
 def get_chat_model(settings):
     provider = _chat_provider(settings)
 
     if provider == "groq":
         if not settings.groq_api_key:
             raise LLMProviderError(
-                "GROQ_API_KEY is missing. Add it to youtube-rag-ai-assistant/.env "
-                "or set LLM_PROVIDER=huggingface."
+                "GROQ_API_KEY is missing. Add it to .env or set LLM_PROVIDER=huggingface."
             )
-
         return _cached_groq_chat_model(
             settings.groq_api_key,
             settings.groq_model,
@@ -99,8 +119,7 @@ def get_chat_model(settings):
 
     if not settings.hf_api_key:
         raise LLMProviderError(
-            "HF_API_KEY is missing. Add it to youtube-rag-ai-assistant/.env "
-            "or set LLM_PROVIDER=groq with GROQ_API_KEY."
+            "HF_API_KEY is missing. Add it to .env or set LLM_PROVIDER=groq with GROQ_API_KEY."
         )
 
     return _cached_hf_chat_model(
@@ -127,11 +146,32 @@ def get_embeddings(settings):
     return _cached_endpoint_embeddings(settings.hf_api_key, settings.embedding_model)
 
 
-def invoke_text(chat_model, prompt):
-    try:
-        response = chat_model.invoke(prompt)
-        return extract_llm_text(response).strip()
-    except Exception as exc:
-        if _is_hf_credit_error(exc):
-            raise LLMProviderError(_hf_credit_message()) from exc
-        raise
+def invoke_text(chat_model, prompt, max_retries=3):
+    # Hard truncate oversized prompts before sending
+    if len(prompt) > MAX_PROMPT_CHARS:
+        prompt = prompt[:MAX_PROMPT_CHARS]
+
+    last_exc = None
+    for attempt in range(max_retries):
+        try:
+            response = chat_model.invoke(prompt)
+            return extract_llm_text(response).strip()
+
+        except Exception as exc:
+            if _is_hf_credit_error(exc):
+                raise LLMProviderError(_hf_credit_message()) from exc
+
+            if _is_rate_limit_error(exc):
+                wait = _extract_retry_seconds(exc)
+                if attempt < max_retries - 1:
+                    time.sleep(wait)
+                    last_exc = exc
+                    continue
+                raise LLMProviderError(
+                    f"Groq rate limit hit. Please wait ~{int(wait)}s and try again. "
+                    "Consider upgrading at https://console.groq.com/settings/billing"
+                ) from exc
+
+            raise
+
+    raise last_exc

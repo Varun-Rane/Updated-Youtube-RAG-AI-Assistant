@@ -5,9 +5,14 @@ def retrieve_documents(
     retriever,
     question,
 ):
+    """
+    Retrieve relevant transcript chunks.
+    """
 
     if retriever is None:
         return []
+
+    question = question.strip()
 
     return retriever.invoke(question)
 
@@ -16,6 +21,9 @@ def format_retrieved_context(
     documents,
     max_chars,
 ):
+    """
+    Build context for the RAG prompt.
+    """
 
     sections = []
 
@@ -28,8 +36,11 @@ def format_retrieved_context(
         metadata = document.metadata
 
         timestamp = metadata.get(
-            "timestamp",
-            "00:00",
+            "timestamp_range",
+            metadata.get(
+                "timestamp",
+                "00:00",
+            ),
         )
 
         video_title = metadata.get(
@@ -42,14 +53,23 @@ def format_retrieved_context(
             "",
         )
 
-        text = document.page_content.strip()
+        source_label = metadata.get(
+            "source_label",
+            "Video",
+        )
+
+        text = trim_text(
+            document.page_content.strip(),
+            700,
+        )
 
         block = f"""
+Source Video: {source_label} - {video_title}
+Video URL: {video_url}
+Timestamp: {timestamp}
 
-[{timestamp}]
-
+Transcript:
 {text}
-
 """
 
         if current_chars + len(block) > max_chars:
@@ -59,44 +79,45 @@ def format_retrieved_context(
 
         sections.append(block)
 
-        retrieved_chunks.append({
+        retrieved_chunks.append(
+            {
 
-            "video_id": metadata.get(
-                "video_id",
-                "",
-            ),
+                "video_id": metadata.get(
+                    "video_id",
+                    "",
+                ),
 
-            "video_title": video_title,
+                "video_title": video_title,
 
-            "video_url": video_url,
+                "video_url": video_url,
 
-            "source_label": metadata.get(
-                "source_label",
-                "Video",
-            ),
+                "source_label": source_label,
 
-            "timestamp": timestamp,
+                "timestamp": timestamp,
 
-            "start": metadata.get(
-                "start",
-                "",
-            ),
+                "start": metadata.get(
+                    "start",
+                    "",
+                ),
 
-            "duration": metadata.get(
-                "duration",
-                "",
-            ),
+                "duration": metadata.get(
+                    "duration",
+                    "",
+                ),
 
-            "chunk_index": metadata.get(
-                "chunk_index",
-                "",
-            ),
+                "chunk_index": metadata.get(
+                    "chunk_index",
+                    "",
+                ),
 
-            "text": text,
+                "text": text,
 
-        })
+            }
+        )
 
-    context = "\n".join(sections)
+    context = "\n\n--------------------------\n\n".join(
+        sections
+    )
 
     context = trim_text(
         context,
@@ -106,7 +127,12 @@ def format_retrieved_context(
     return context, retrieved_chunks
 
 
-def unique_timestamps(chunks):
+def unique_timestamps(
+    chunks,
+):
+    """
+    Remove duplicate timestamps.
+    """
 
     seen = set()
 
@@ -114,7 +140,9 @@ def unique_timestamps(chunks):
 
     for chunk in chunks:
 
-        ts = chunk.get("timestamp")
+        ts = chunk.get(
+            "timestamp"
+        )
 
         if ts and ts not in seen:
 
@@ -125,7 +153,13 @@ def unique_timestamps(chunks):
     return result
 
 
-def unique_sources(chunks, videos=None):
+def unique_sources(
+    chunks,
+    videos=None,
+):
+    """
+    Remove duplicate source videos.
+    """
 
     seen = set()
 
@@ -133,30 +167,65 @@ def unique_sources(chunks, videos=None):
 
     for chunk in chunks:
 
-        key = chunk.get("video_url")
+        key = (
+            chunk.get(
+                "video_url",
+                "",
+            )
+        )
 
         if key in seen:
             continue
 
         seen.add(key)
 
-        result.append({
+        result.append(
+            {
 
-            "label": chunk.get(
-                "source_label",
-                "Video",
-            ),
+                "label": chunk.get(
+                    "source_label",
+                    "Video",
+                ),
 
-            "title": chunk.get(
-                "video_title",
-                "Video",
-            ),
+                "title": chunk.get(
+                    "video_title",
+                    "Video",
+                ),
 
-            "url": chunk.get(
-                "video_url",
-                "",
-            ),
+                "url": chunk.get(
+                    "video_url",
+                    "",
+                ),
 
-        })
+            }
+        )
+
+    if result:
+        return result
+
+    if videos:
+
+        for video in videos:
+
+            result.append(
+                {
+
+                    "label": video.get(
+                        "label",
+                        "Video",
+                    ),
+
+                    "title": video.get(
+                        "video_title",
+                        "Video",
+                    ),
+
+                    "url": video.get(
+                        "video_url",
+                        "",
+                    ),
+
+                }
+            )
 
     return result
