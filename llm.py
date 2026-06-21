@@ -146,10 +146,15 @@ def get_embeddings(settings):
     return _cached_endpoint_embeddings(settings.hf_api_key, settings.embedding_model)
 
 
-def invoke_text(chat_model, prompt, max_retries=3):
+def invoke_text(
+    chat_model,
+    prompt,
+    max_retries=3,
+    max_prompt_chars=MAX_PROMPT_CHARS,
+):
     # Hard truncate oversized prompts before sending
-    if len(prompt) > MAX_PROMPT_CHARS:
-        prompt = prompt[:MAX_PROMPT_CHARS]
+    if len(prompt) > max_prompt_chars:
+        prompt = prompt[:max_prompt_chars]
 
     last_exc = None
     for attempt in range(max_retries):

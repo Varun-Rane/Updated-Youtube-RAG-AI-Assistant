@@ -43,7 +43,6 @@ Return EXACTLY in this format:
 <video title>
 """
 
-
 SUMMARY_CHUNK_PROMPT = """
 You are an Expert Lecture Notes Creator for students preparing for exams.
 
@@ -79,7 +78,6 @@ Extract the following from the transcript chunk:
 Transcript:
 {transcript}
 """
-
 
 FINAL_SUMMARY_PROMPT = """
 You are merging multiple lecture note chunks into one complete, detailed study guide.
@@ -127,7 +125,6 @@ Generate a complete study guide in this format:
 <likely questions based on video content with brief answers>
 """
 
-
 GENERAL_PROMPT = """
 You are a helpful AI Assistant.
 
@@ -141,7 +138,6 @@ Conversation History:
 User Question:
 {question}
 """
-
 
 MEMORY_PROMPT = """
 You are a Conversation Memory Assistant.
@@ -162,7 +158,6 @@ Total User Questions:
 Current Question:
 {question}
 """
-
 
 VIDEO_TASK_CHUNK_PROMPT = """
 You are extracting detailed study material from a lecture transcript chunk.
@@ -195,7 +190,6 @@ Transcript:
 {transcript}
 """
 
-
 VIDEO_TASK_MERGE_PROMPT = """
 You are merging extracted study material from multiple transcript chunks.
 
@@ -211,7 +205,6 @@ Requested Task:
 Intermediate Material:
 {material}
 """
-
 
 FINAL_VIDEO_TASK_PROMPT = """
 You are generating detailed study material from complete video transcript data.
@@ -238,10 +231,33 @@ Requested Task:
 Extracted Material:
 {material}
 """
+
 CLASSIFIER_PROMPT = """
 You are a routing classifier.
 
-Classify the user query into exactly ONE category.
+Your job is to classify the user's query into EXACTLY ONE category.
+
+IMPORTANT RULES:
+
+If user asks for:
+- Summary
+- Summarize
+- Detailed Summary
+- Video Summary
+- Generate Notes
+- Study Notes
+- Revision Notes
+- Detailed Notes
+- Video Overview
+- Topics Covered
+- Key Concepts
+- What is this video about
+
+ALWAYS return:
+
+VIDEO_SUMMARY
+
+--------------------------------------------------
 
 Categories:
 
@@ -250,32 +266,90 @@ MEMORY
 - Previous questions
 - User name
 - Conversation memory
+- What was my first question
+- What did I ask before
+- What is my name
+- Who am I
 
 GENERAL
 - Coding help
-- General knowledge
+- Programming
+- Leetcode
+- DSA
 - Resume
 - Career advice
-- Leetcode
+- General knowledge
 - Anything unrelated to loaded videos
 
 VIDEO_QA
-- Any question asking information from loaded videos
-- Default category when video content is referenced
+- Questions asking information from loaded videos
+- Explain a topic discussed in the video
+- What is RAG
+- What is Vector Database
+- How does LangChain work
+- Any content-specific question
+- What is this video about
 
 VIDEO_SUMMARY
-- Full video summary
+- Full summary
+- Detailed summary
+- Generate notes
+- Study notes
+- Revision notes
 - Video overview
 - Timeline
 - Topics covered
+- Key concepts
 
 VIDEO_TASK
-- Generate MCQ
 - Generate Quiz
+- Generate MCQ
 - Generate Flashcards
 - Generate Interview Questions
-- Generate Revision Notes
+- Generate Practice Questions
 - Generate Cheat Sheet
+
+--------------------------------------------------
+
+Examples:
+
+Question: Generate notes
+Answer: VIDEO_SUMMARY
+
+Question: Give me detailed notes
+Answer: VIDEO_SUMMARY
+
+Question: Summarize this video
+Answer: VIDEO_SUMMARY
+
+Question: What is this video about?
+Answer: VIDEO_SUMMARY
+
+Question: Generate MCQ
+Answer: VIDEO_TASK
+
+Question: Generate Quiz
+Answer: VIDEO_TASK
+
+Question: Generate Flashcards
+Answer: VIDEO_TASK
+
+Question: Generate Interview Questions
+Answer: VIDEO_TASK
+
+Question: What is RAG?
+Answer: VIDEO_QA
+
+Question: Explain LangChain
+Answer: VIDEO_QA
+
+Question: What was my first question?
+Answer: MEMORY
+
+Question: Give merge sort code
+Answer: GENERAL
+
+--------------------------------------------------
 
 Return ONLY one word:
 
@@ -287,4 +361,120 @@ VIDEO_TASK
 
 Question:
 {question}
+"""
+
+DOMAIN_CLASSIFIER_PROMPT = """
+You are a routing classifier.
+
+Classify the question into exactly one category.
+
+MEMORY
+- Chat history
+- Previous questions
+- User name
+- Conversation memory
+
+GENERAL
+- Programming
+- Career advice
+- Resume
+- Leetcode
+- General knowledge
+- Anything unrelated to loaded videos
+
+VIDEO
+- Questions about loaded videos
+- Transcript content
+- Notes
+- Summary
+- Topics discussed
+- MCQ
+- Flashcards
+
+Return ONLY:
+
+MEMORY
+GENERAL
+VIDEO
+
+Question:
+{question}
+"""
+
+VIDEO_INTENT_PROMPT = """
+You are a video query classifier.
+
+Classify into exactly one category.
+
+VIDEO_QA
+- Ask information from video
+- Explain concepts
+- Answer questions
+
+VIDEO_OVERVIEW
+- What is the video about
+- Topics discussed
+- Timeline
+- Main concepts
+- Key takeaways
+
+VIDEO_SUMMARY
+- Generate notes
+- Detailed summary
+- Revision notes
+- Study guide
+
+VIDEO_TASK
+- Generate MCQ
+- Generate Quiz
+- Generate Flashcards
+- Generate Interview Questions
+- Generate Cheat Sheet
+
+Return ONLY:
+
+VIDEO_QA
+VIDEO_OVERVIEW
+VIDEO_SUMMARY
+VIDEO_TASK
+
+Question:
+{question}
+"""
+
+VIDEO_OVERVIEW_PROMPT = """
+You are analyzing a complete YouTube video.
+
+The transcript excerpts below are sampled from
+different parts of the video.
+
+Your task:
+
+1. Explain what the video is about.
+2. List major topics covered.
+3. List important concepts.
+4. Identify key moments.
+5. Present information chronologically.
+6. Use only transcript information.
+7. Do not hallucinate.
+
+Transcript:
+
+{context}
+
+Question:
+
+{question}
+
+Provide:
+
+## Overview
+
+## Major Topics
+
+## Key Concepts
+
+## Important Moments
+
+## Final Takeaway
 """

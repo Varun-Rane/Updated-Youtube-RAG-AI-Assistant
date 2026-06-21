@@ -69,6 +69,7 @@ class Settings:
     chunk_overlap: int
     top_k: int
     max_context_chars: int
+    summary_context_chars: int
     max_history_messages: int
     max_history_chars: int
     max_new_tokens: int
@@ -100,6 +101,7 @@ def load_settings():
         chunk_overlap=_int_env("CHUNK_OVERLAP", 200),
         top_k=_int_env("TOP_K", 6),                    # fetch more chunks for detail
         max_context_chars=_int_env("MAX_CONTEXT_CHARS", 3500),  # more context = better answers
+        summary_context_chars=_int_env("SUMMARY_CONTEXT_CHARS", 8000),
         max_history_messages=_int_env("MAX_HISTORY_MESSAGES", 6),
         max_history_chars=_int_env("MAX_HISTORY_CHARS", 2000),
         max_new_tokens=_int_env("MAX_NEW_TOKENS", 900),  # longer answers for notes

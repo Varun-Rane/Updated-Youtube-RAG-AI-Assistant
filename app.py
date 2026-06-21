@@ -1,6 +1,6 @@
 import streamlit as st
 from router import classify_query
-
+from overview import run_video_overview
 from config import load_settings
 from llm import get_chat_model, get_embeddings
 from memory import (
@@ -11,7 +11,6 @@ from memory import (
     save_messages,
 )
 from rag import run_rag
-from router import classify_query
 from transcript_loader import load_transcripts
 from ui import (
     configure_page,
@@ -52,12 +51,13 @@ def load_video_index(raw_urls, settings):
     for warning in warnings:
         st.warning(warning)
 
-
 def answer_question(question, settings, history_before):
     # Validate API keys early
     provider = settings.llm_provider
+
     if provider == "groq" and not settings.groq_api_key:
         return _error_bundle("GROQ_API_KEY is missing. Add it to .env.")
+
     if provider == "huggingface" and not settings.hf_api_key:
         return _error_bundle("HF_API_KEY is missing. Add it to .env.")
 
@@ -70,39 +70,55 @@ def answer_question(question, settings, history_before):
             st.session_state.get("retriever")
         ),
     )
+
     st.session_state.last_route = route
+
     print("=" * 60)
-    print("QUESTION:", question)
-    print("ROUTE:", route)
+    print(f"QUESTION: {question}")
+    print(f"ROUTE: {route}")
     print("=" * 60)
+
     history = history_text(
         history_before,
         max_messages=settings.max_history_messages,
         max_chars=settings.max_history_chars,
     )
 
+    # MEMORY
     if route == "MEMORY":
         return {
             "mode": "MEMORY",
             "answer": answer_memory_question(
-                question, history_before, chat_model, settings, history=history
+                question,
+                history_before,
+                chat_model,
+                settings,
+                history=history,
             ),
             "timestamps": [],
             "source_videos": [],
             "retrieved_chunks": [],
         }
 
+    # VIDEO SUMMARY
     if route == "VIDEO_SUMMARY":
         from summary import run_summary
-        return run_summary(
-            question=question,
-            videos=st.session_state.get("videos", []),
-            chat_model=chat_model,
-            settings=settings,
-        )
 
+        return run_summary(
+    question=question,
+    videos=st.session_state.get("videos", []),
+    transcript_chunks=st.session_state.get(
+        "transcript_chunks",
+        [],
+    ),
+    chat_model=chat_model,
+    settings=settings,
+)
+
+    # VIDEO TASK
     if route == "VIDEO_TASK":
         from video_task import run_video_task
+
         return run_video_task(
             question=question,
             videos=st.session_state.get("videos", []),
@@ -110,14 +126,27 @@ def answer_question(question, settings, history_before):
             settings=settings,
         )
 
+    # GENERAL
     if route == "GENERAL":
         from general import run_general
-        return run_general(question=question, history=history, chat_model=chat_model)
 
+        return run_general(
+            question=question,
+            history=history,
+            chat_model=chat_model,
+        )
+
+    # VIDEO QA
     if route == "VIDEO_QA":
+
         if st.session_state.get("retriever") is None:
             from general import run_general
-            return run_general(question=question, history=history, chat_model=chat_model)
+
+            return run_general(
+                question=question,
+                history=history,
+                chat_model=chat_model,
+            )
 
         return run_rag(
             question=question,
@@ -128,7 +157,30 @@ def answer_question(question, settings, history_before):
             settings=settings,
         )
 
-    return _error_bundle(f"Unsupported query route: {route}")
+    # VIDEO OVERVIEW
+    if route == "VIDEO_OVERVIEW":
+
+        if st.session_state.get("vectorstore") is None:
+            from general import run_general
+
+            return run_general(
+                question=question,
+                history=history,
+                chat_model=chat_model,
+            )
+
+        return run_video_overview(
+            question=question,
+            vector_store=st.session_state.get("vectorstore"),
+            videos=st.session_state.get("videos", []),
+            chat_model=chat_model,
+            settings=settings,
+        )
+
+    return _error_bundle(
+        f"Unsupported query route: {route}"
+    )
+
 
 
 def _error_bundle(message):
@@ -178,13 +230,7 @@ def main():
 
     if clear_clicked:
         clear_memory(settings.memory_file)
-        st.session_state.messages = []
-        st.session_state.videos = []
-        st.session_state.transcript_chunks = []
-        st.session_state.vectorstore = None
-        st.session_state.retriever = None
-        st.session_state.video_loaded = False
-        st.session_state.last_route = None
+        st.session_state.clear()
         st.rerun()
 
     if load_clicked:
