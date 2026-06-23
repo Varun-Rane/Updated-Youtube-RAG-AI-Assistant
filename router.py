@@ -19,6 +19,53 @@ VIDEO_ROUTES = {
 }
 
 
+VIDEO_KEYWORDS = {
+    "hnsw",
+    "ivf",
+    "product quantization",
+    "pq",
+    "metadata filtering",
+    "vector database",
+    "embedding",
+    "embeddings",
+    "ann",
+    "approximate nearest neighbor",
+    "centroid",
+    "centroids",
+    "cluster",
+    "clustering",
+    "codebook",
+    "faiss",
+    "similarity search",
+    "indexing",
+    "vector",
+}
+
+
+SUMMARY_KEYWORDS = {
+    "summarize",
+    "summary",
+    "study notes",
+    "notes",
+    "revision notes",
+    "study guide",
+    "topics covered",
+    "key concepts",
+    "video overview",
+    "what is this video about",
+}
+
+
+TASK_KEYWORDS = {
+    "mcq",
+    "quiz",
+    "flashcards",
+    "interview questions",
+    "practice questions",
+    "cheat sheet",
+}
+
+
 def classify_domain(
     question,
     chat_model,
@@ -80,6 +127,55 @@ def classify_query(
     chat_model,
     has_loaded_videos=False,
 ):
+    q = question.lower().strip()
+
+    # =====================================
+    # MEMORY
+    # =====================================
+
+    memory_phrases = [
+        "my first question",
+        "previous question",
+        "what did i ask",
+        "conversation history",
+        "chat history",
+        "remember",
+        "what was my",
+    ]
+
+    if any(x in q for x in memory_phrases):
+        return "MEMORY"
+
+    # =====================================
+    # VIDEO OVERRIDES
+    # =====================================
+
+    if has_loaded_videos:
+
+        # Timestamp queries
+        if ":" in q:
+            print("ROUTER OVERRIDE -> VIDEO_QA (timestamp)")
+            return "VIDEO_QA"
+
+        # Technical concepts from loaded video
+        if any(keyword in q for keyword in VIDEO_KEYWORDS):
+            print("ROUTER OVERRIDE -> VIDEO_QA (keyword)")
+            return "VIDEO_QA"
+
+        # Summary requests
+        if any(keyword in q for keyword in SUMMARY_KEYWORDS):
+            print("ROUTER OVERRIDE -> VIDEO_SUMMARY")
+            return "VIDEO_SUMMARY"
+
+        # Task requests
+        if any(keyword in q for keyword in TASK_KEYWORDS):
+            print("ROUTER OVERRIDE -> VIDEO_TASK")
+            return "VIDEO_TASK"
+
+    # =====================================
+    # LLM DOMAIN CLASSIFIER
+    # =====================================
+
     domain = classify_domain(
         question,
         chat_model,

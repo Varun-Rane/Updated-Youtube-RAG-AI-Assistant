@@ -413,6 +413,10 @@ def run_summary(
         prompt,
         max_prompt_chars=MAX_SUMMARY_PROMPT_CHARS,
     )
+    print("=" * 80)
+    print("SUMMARY LENGTH")
+    print(len(answer))
+    print("=" * 80)
 
     title = (
         videos[0].get("video_title", "Video")

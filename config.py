@@ -95,7 +95,7 @@ def load_settings():
         embedding_provider=_env("EMBEDDING_PROVIDER", "local").lower(),
         embedding_model=_env(
             "EMBEDDING_MODEL",
-            "sentence-transformers/all-MiniLM-L6-v2",
+            "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         ),
         chunk_size=_int_env("CHUNK_SIZE", 1000),       # smaller = more precise retrieval
         chunk_overlap=_int_env("CHUNK_OVERLAP", 200),

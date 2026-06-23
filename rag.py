@@ -1,3 +1,5 @@
+from streamlit import context
+
 from llm import invoke_text
 from prompts import RAG_PROMPT
 from retriever import (
@@ -35,7 +37,11 @@ def run_rag(question, retriever, videos, history, chat_model, settings):
         context=context,
         question=question,
     )
-
+    print("=" * 80)
+    print("RAG CONTEXT")
+    print(context[:3000])
+    print("=" * 80)
+    
     answer = invoke_text(chat_model, prompt)
 
     return {

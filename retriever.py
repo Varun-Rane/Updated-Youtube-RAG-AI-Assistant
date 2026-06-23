@@ -14,8 +14,63 @@ def retrieve_documents(
 
     question = question.strip()
 
-    return retriever.invoke(question)
+    docs = retriever.invoke(question)
 
+    print("=" * 80)
+    print("RETRIEVAL DEBUG")
+    print("QUESTION:", question)
+    print("DOCS RETRIEVED:", len(docs))
+
+    for i, doc in enumerate(docs[:5], start=1):
+
+        ts = doc.metadata.get(
+            "timestamp_range",
+            doc.metadata.get(
+                "timestamp",
+                "N/A",
+            ),
+        )
+
+        print(f"{i}. {ts}")
+
+    print("=" * 80)
+
+    # keyword fallback
+    try:
+
+        keyword = question.lower()
+
+        if len(keyword.split()) <= 6:
+
+            all_docs = list(
+                retriever.vectorstore.docstore._dict.values()
+            )
+
+            keyword_hits = []
+
+            for doc in all_docs:
+
+                if keyword in doc.page_content.lower():
+
+                    keyword_hits.append(doc)
+
+            if keyword_hits:
+
+                print(
+                    f"KEYWORD FALLBACK HIT: "
+                    f"{len(keyword_hits)} docs"
+                )
+
+                docs = keyword_hits[:5] + docs
+
+    except Exception as exc:
+
+        print(
+            "KEYWORD FALLBACK FAILED:",
+            exc,
+        )
+
+    return docs[:8]
 
 def format_retrieved_context(
     documents,
@@ -81,37 +136,27 @@ Transcript:
 
         retrieved_chunks.append(
             {
-
                 "video_id": metadata.get(
                     "video_id",
                     "",
                 ),
-
                 "video_title": video_title,
-
                 "video_url": video_url,
-
                 "source_label": source_label,
-
                 "timestamp": timestamp,
-
                 "start": metadata.get(
                     "start",
                     "",
                 ),
-
                 "duration": metadata.get(
                     "duration",
                     "",
                 ),
-
                 "chunk_index": metadata.get(
                     "chunk_index",
                     "",
                 ),
-
                 "text": text,
-
             }
         )
 
@@ -167,11 +212,9 @@ def unique_sources(
 
     for chunk in chunks:
 
-        key = (
-            chunk.get(
-                "video_url",
-                "",
-            )
+        key = chunk.get(
+            "video_url",
+            "",
         )
 
         if key in seen:
@@ -181,22 +224,18 @@ def unique_sources(
 
         result.append(
             {
-
                 "label": chunk.get(
                     "source_label",
                     "Video",
                 ),
-
                 "title": chunk.get(
                     "video_title",
                     "Video",
                 ),
-
                 "url": chunk.get(
                     "video_url",
                     "",
                 ),
-
             }
         )
 
@@ -209,22 +248,18 @@ def unique_sources(
 
             result.append(
                 {
-
                     "label": video.get(
                         "label",
                         "Video",
                     ),
-
                     "title": video.get(
                         "video_title",
                         "Video",
                     ),
-
                     "url": video.get(
                         "video_url",
                         "",
                     ),
-
                 }
             )
 

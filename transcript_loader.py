@@ -12,10 +12,18 @@ def _snippet_value(snippet, key, default=None):
 def fetch_transcript(video_id, languages):
     transcript_api = YouTubeTranscriptApi()
 
+    print("=" * 80)
+    print("TRANSCRIPT DEBUG")
+    print("VIDEO ID:", video_id)
+    print("LANGUAGES:", languages)
+    print("=" * 80)
+
     last_error = None
 
     for language in languages:
         try:
+            print(f"Trying language -> {language}")
+
             transcript = transcript_api.fetch(
                 video_id,
                 languages=[language],
@@ -23,14 +31,22 @@ def fetch_transcript(video_id, languages):
 
             transcript_items = list(transcript)
 
+            print(
+                f"SUCCESS -> {language} -> "
+                f"{len(transcript_items)} entries"
+            )
+
             if transcript_items:
                 return transcript_items, None
 
         except Exception as exc:
+            print(f"FAILED -> {language}")
+            print("TYPE:", type(exc).__name__)
+            print("ERROR:", repr(exc))
+
             last_error = exc
 
     return None, last_error
-
 
 def fetch_video_title(video_url):
     try:
@@ -293,7 +309,12 @@ def load_transcripts(video_urls, settings):
             snippet["text"]
             for snippet in snippets
         )
-
+        print("=" * 80)
+        print("HNSW CHECK")
+        print("HNSW" in transcript_text.upper())
+        print("IVF" in transcript_text.upper())
+        print("PRODUCT QUANTIZATION" in transcript_text.upper())
+        print("=" * 80)
         video = {
 
             "label": f"Video {index}",
