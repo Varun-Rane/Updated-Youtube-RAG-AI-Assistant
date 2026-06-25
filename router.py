@@ -49,12 +49,18 @@ SUMMARY_KEYWORDS = {
     "notes",
     "revision notes",
     "study guide",
+}
+OVERVIEW_KEYWORDS = {
     "topics covered",
+    "main topics",
     "key concepts",
+    "overview",
     "video overview",
     "what is this video about",
+    "main idea",
+    "key takeaways",
+    "overall video",
 }
-
 
 TASK_KEYWORDS = {
     "mcq",
@@ -162,15 +168,20 @@ def classify_query(
             print("ROUTER OVERRIDE -> VIDEO_QA (keyword)")
             return "VIDEO_QA"
 
-        # Summary requests
-        if any(keyword in q for keyword in SUMMARY_KEYWORDS):
-            print("ROUTER OVERRIDE -> VIDEO_SUMMARY")
-            return "VIDEO_SUMMARY"
-
         # Task requests
         if any(keyword in q for keyword in TASK_KEYWORDS):
             print("ROUTER OVERRIDE -> VIDEO_TASK")
             return "VIDEO_TASK"
+
+        # Summary requests
+        if any(keyword in q for keyword in SUMMARY_KEYWORDS):
+            print("ROUTER OVERRIDE -> VIDEO_SUMMARY")
+            return "VIDEO_SUMMARY"
+        
+        # Overview requests
+        if any(keyword in q for keyword in OVERVIEW_KEYWORDS):
+            print("ROUTER OVERRIDE -> VIDEO_OVERVIEW")
+            return "VIDEO_OVERVIEW"
 
     # =====================================
     # LLM DOMAIN CLASSIFIER

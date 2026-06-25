@@ -315,6 +315,14 @@ def load_transcripts(video_urls, settings):
         print("IVF" in transcript_text.upper())
         print("PRODUCT QUANTIZATION" in transcript_text.upper())
         print("=" * 80)
+        print("=" * 80)
+        print("IVF CHECK")
+
+        print("IVF" in transcript_text.upper())
+        print("INVERTED FILE" in transcript_text.upper())
+        print("आईबीएफ" in transcript_text)
+        print("=" * 80)
+        
         video = {
 
             "label": f"Video {index}",
