@@ -1,126 +1,28 @@
-import re
-
 from utils import trim_text
 
 
-_STOP_WORDS = {
-    "what", "is", "the", "a", "an",
-    "explain", "tell", "me", "about",
-    "in", "this", "video", "from",
-    "how", "why", "when", "where",
-    "does", "do", "did", "can",
-    "could", "would", "should",
-    "please", "give", "show",
-    "describe", "define", "and",
-    "or", "of", "to", "for",
-    "with", "are", "was", "were",
-}
+def retrieve_documents(
+    retriever,
+    question,
+):
+    """
+    Retrieve relevant transcript chunks.
+    """
 
-
-TIMESTAMP_PATTERN = re.compile(
-    r"\d{1,2}:\d{2}(?::\d{2})?"
-)
-
-
-def extract_keywords(question):
-    words = re.findall(
-        r"\w+",
-        question.lower(),
-    )
-
-    return [
-        word
-        for word in words
-        if (
-            len(word) > 2
-            and word not in _STOP_WORDS
-        )
-    ]
-
-
-def get_all_documents(retriever):
-    try:
-        vectorstore = getattr(
-            retriever,
-            "vectorstore",
-            None,
-        )
-
-        if vectorstore is None:
-            vectorstore = getattr(
-                retriever,
-                "_vectorstore",
-                None,
-            )
-
-        if vectorstore is None:
-            return []
-
-        return list(
-            vectorstore.docstore._dict.values()
-        )
-
-    except Exception as exc:
-        print(
-            "DOCSTORE ACCESS FAILED:",
-            exc,
-        )
+    if retriever is None:
         return []
 
+    question = question.strip()
 
-def timestamp_search(
-    retriever,
-    timestamp_query,
-):
-    all_docs = get_all_documents(
-        retriever
-    )
-
-    matches = []
-
-    for doc in all_docs:
-
-        ts_range = doc.metadata.get(
-            "timestamp_range",
-            "",
-        )
-
-        ts_single = doc.metadata.get(
-            "timestamp",
-            "",
-        )
-
-        if (
-            timestamp_query in ts_range
-            or timestamp_query == ts_single
-        ):
-            matches.append(doc)
-
-    if matches:
-
-        print("=" * 80)
-        print("TIMESTAMP MATCH FOUND")
-        print("QUERY:", timestamp_query)
-        print("MATCHES:", len(matches))
-        print("=" * 80)
-
-    return matches[:5]
-
-
-def vector_search(retriever, question,):
-    docs = retriever.invoke(
-        question
-    )
+    docs = retriever.invoke(question)
 
     print("=" * 80)
-    print("VECTOR SEARCH")
+    print("RETRIEVAL DEBUG")
     print("QUESTION:", question)
-    print("DOCS:", len(docs))
+    print("DOCS RETRIEVED:", len(docs))
 
-    for i, doc in enumerate(
-        docs[:5],
-        start=1,
-    ):
+    for i, doc in enumerate(docs[:5], start=1):
+
         ts = doc.metadata.get(
             "timestamp_range",
             doc.metadata.get(
@@ -128,223 +30,56 @@ def vector_search(retriever, question,):
                 "N/A",
             ),
         )
+
+        print(f"{i}. {ts}")
+
+    print("=" * 80)
+
+    # keyword fallback
+    try:
+
+        keyword = question.lower()
+
+        if len(keyword.split()) <= 6:
+
+            all_docs = list(
+                retriever.vectorstore.docstore._dict.values()
+            )
+
+            keyword_hits = []
+
+            for doc in all_docs:
+
+                if keyword in doc.page_content.lower():
+
+                    keyword_hits.append(doc)
+
+            if keyword_hits:
+
+                print(
+                    f"KEYWORD FALLBACK HIT: "
+                    f"{len(keyword_hits)} docs"
+                )
+
+                docs = keyword_hits[:5] + docs
+
+    except Exception as exc:
+
         print(
-            f"{i}. {ts}"
+            "KEYWORD FALLBACK FAILED:",
+            exc,
         )
 
-    print("=" * 80)
-
-    return docs
-
-def keyword_boost(
-    retriever,
-    question,
-    vector_docs,
-):
-    print("=" * 80)
-    print("KEYWORD BOOST ENTERED")
-    print("QUESTION:", question)
-    print("=" * 80)
-    keywords = extract_keywords(question)
-    print("EXTRACTED KEYWORDS:", keywords)
-    if not keywords:
-        return vector_docs
-
-    all_docs = get_all_documents(
-        retriever
-    )
-
-    keyword_hits = []
-
-    for doc in all_docs:
-
-        text = doc.page_content.lower()
-
-        matched = []
-
-        for keyword in keywords:
-
-            if keyword in text:
-                matched.append(
-                    keyword
-                )
-
-        if matched:
-
-            keyword_hits.append(
-                (
-                    len(matched),
-                    doc,
-                )
-            )
-
-    keyword_hits.sort(
-        key=lambda x: x[0],
-        reverse=True,
-    )
-
-    keyword_docs = [
-        item[1]
-        for item in keyword_hits[:10]
-    ]
-
-    if keyword_docs:
-        print("=" * 80)
-        print("KEYWORD BOOST")
-        print("KEYWORDS:", keywords)
-        print("MATCHES:", len(keyword_docs))
-
-        for hit in keyword_docs[:10]:
-            print(hit.metadata.get("timestamp_range", "N/A"))
-
-        print("=" * 80)
-
-    merged = []
-    seen = set()
-
-    for doc in (keyword_docs + vector_docs):
-        key = (
-            doc.metadata.get("video_id", ""),
-            doc.metadata.get("chunk_index", ""),
-        )
-
-        if key in seen:
-            continue
-
-        seen.add(key)
-
-        merged.append(doc)
-
-    return merged
-
-
-COMPARISON_WORDS = {
-    "compare",
-    "comparison",
-    "difference",
-    "different",
-    "vs",
-    "versus",
-}
-
-def is_comparison_query(question):
-    q = question.lower()
-    return any(word in q for word in COMPARISON_WORDS)
-
-def retrieve_documents(
-    retriever,
-    question,
-):
-    if retriever is None:
-        return []
-
-    question = question.strip()
-
-    timestamp_match = (
-        TIMESTAMP_PATTERN.search(
-            question
-        )
-    )
-
-    if timestamp_match:
-
-        docs = timestamp_search(
-            retriever,
-            timestamp_match.group(),
-        )
-
-        if docs:
-            return docs
-
-    # Determine retrieval strategy
-    if is_comparison_query(question):
-        # Comparison query: search separately for each extracted keyword, skipping comparison words
-        keywords = [
-            kw for kw in extract_keywords(question)
-            if kw not in COMPARISON_WORDS
-        ]
-        docs = []
-        seen = set()
-        for kw in keywords:
-            # Perform a vector search for each keyword and collect results
-            kw_docs = vector_search(retriever, kw)
-            for doc in kw_docs:
-                key = (
-                    doc.metadata.get("video_id", ""),
-                    doc.metadata.get("chunk_index", ""),
-                )
-                if key in seen:
-                    continue
-                seen.add(key)
-                docs.append(doc)
-                # Stop early if we already have enough chunks (consistent with later slicing)
-                if len(docs) >= 8:
-                    break
-            if len(docs) >= 8:
-                break
-        # No additional keyword boost – we already used keyword‑based retrieval
-    else:
-        # Regular query flow
-        docs = vector_search(
-            retriever,
-            question,
-        )
-
-        docs = keyword_boost(
-            retriever,
-            question,
-            docs,
-        )
-    print("=" * 80)
-    print("IVF DEBUG")
-
-    all_docs = get_all_documents(
-        retriever
-    )
-
-    ivf_count = 0
-
-    for doc in all_docs:
-
-        text = doc.page_content.lower()
-
-        if (
-            "ivf" in text
-            or "inverted" in text
-            or "file index" in text
-            or "आईबीएफ" in text
-        ):
-            ivf_count += 1
-
-            print(
-                doc.metadata.get(
-                    "timestamp_range",
-                    "N/A",
-                )
-            )
-
-    print("TOTAL IVF DOCS:",ivf_count,)
-
-    print("=" * 80)
-    print("=" * 80)
-    print("FINAL DOCS")
-    
-    for doc in docs[:8]:
-        print(
-            doc.metadata.get(
-                "timestamp_range",
-                "N/A"
-            )
-        )
-    
-    print("=" * 80)
     return docs[:8]
-
 
 def format_retrieved_context(
     documents,
     max_chars,
 ):
+    """
+    Build context for the RAG prompt.
+    """
+
     sections = []
 
     retrieved_chunks = []
@@ -384,14 +119,15 @@ def format_retrieved_context(
         )
 
         block = f"""
-            Source Video: {source_label} - {video_title}
-            Video URL: {video_url}
-            Timestamp: {timestamp}
-            Transcript:
-            {text}
-        """
+Source Video: {source_label} - {video_title}
+Video URL: {video_url}
+Timestamp: {timestamp}
 
-        if (current_chars + len(block) > max_chars):
+Transcript:
+{text}
+"""
+
+        if current_chars + len(block) > max_chars:
             break
 
         current_chars += len(block)
@@ -424,10 +160,8 @@ def format_retrieved_context(
             }
         )
 
-    context = (
-        "\n\n--------------------------\n\n".join(
-            sections
-        )
+    context = "\n\n--------------------------\n\n".join(
+        sections
     )
 
     context = trim_text(
@@ -435,13 +169,16 @@ def format_retrieved_context(
         max_chars,
     )
 
-    return (
-        context,
-        retrieved_chunks,
-    )
+    return context, retrieved_chunks
 
 
-def unique_timestamps(chunks,):
+def unique_timestamps(
+    chunks,
+):
+    """
+    Remove duplicate timestamps.
+    """
+
     seen = set()
 
     result = []
@@ -452,11 +189,10 @@ def unique_timestamps(chunks,):
             "timestamp"
         )
 
-        if (
-            ts
-            and ts not in seen
-        ):
+        if ts and ts not in seen:
+
             seen.add(ts)
+
             result.append(ts)
 
     return result
@@ -466,21 +202,25 @@ def unique_sources(
     chunks,
     videos=None,
 ):
+    """
+    Remove duplicate source videos.
+    """
+
     seen = set()
 
     result = []
 
     for chunk in chunks:
 
-        url = chunk.get(
+        key = chunk.get(
             "video_url",
             "",
         )
 
-        if url in seen:
+        if key in seen:
             continue
 
-        seen.add(url)
+        seen.add(key)
 
         result.append(
             {
@@ -492,7 +232,10 @@ def unique_sources(
                     "video_title",
                     "Video",
                 ),
-                "url": url,
+                "url": chunk.get(
+                    "video_url",
+                    "",
+                ),
             }
         )
 
@@ -500,7 +243,9 @@ def unique_sources(
         return result
 
     if videos:
+
         for video in videos:
+
             result.append(
                 {
                     "label": video.get(
