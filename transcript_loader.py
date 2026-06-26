@@ -126,10 +126,13 @@ def _chunk_from_lines(video, lines, chunk_index):
     start_ts = lines[0]["timestamp"]
     end_ts = lines[-1]["timestamp"]
 
-    text = " ".join(
-        line["line"]
+    # Clean and normalize whitespace in the chunk text
+    raw_text = " ".join(
+        line["line"].strip()
         for line in lines
     )
+    # Collapse any repeated whitespace characters
+    text = " ".join(raw_text.split())
 
     return {
 
@@ -154,6 +157,12 @@ def _chunk_from_lines(video, lines, chunk_index):
             "chunk_index": chunk_index,
 
             "source_label": video["label"],
+
+            # New metadata fields
+            "char_count": len(text),
+            "start_snippet": lines[0]["start"],
+            "end_snippet": lines[-1]["end"],
+            "language": video.get("language", "unknown"),
 
         },
 

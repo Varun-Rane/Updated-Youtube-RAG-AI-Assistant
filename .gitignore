@@ -3,3 +3,8 @@
 __pycache__/
 *.pyc
 .youtube_rag_memory.json
+.codex
+.claude
+.agents
+.summary_cache
+.vscode

@@ -162,6 +162,21 @@ def classify_query(
         if ":" in q:
             print("ROUTER OVERRIDE -> VIDEO_QA (timestamp)")
             return "VIDEO_QA"
+        # Video‑specific QA patterns (override before other checks)
+        VIDEO_QA_PATTERNS = (
+            " in this video",
+            " from this video",
+            "does this video",
+            "does the lecture",
+            "does the speaker",
+            "is discussed",
+            "discuss",
+            "mentioned in this video",
+            "mentioned in the lecture",
+        )
+        if any(pat in q for pat in VIDEO_QA_PATTERNS):
+            print("ROUTER OVERRIDE -> VIDEO_QA (video-specific question)")
+            return "VIDEO_QA"
 
         # Technical concepts from loaded video
         if any(keyword in q for keyword in VIDEO_KEYWORDS):
@@ -177,7 +192,7 @@ def classify_query(
         if any(keyword in q for keyword in SUMMARY_KEYWORDS):
             print("ROUTER OVERRIDE -> VIDEO_SUMMARY")
             return "VIDEO_SUMMARY"
-        
+
         # Overview requests
         if any(keyword in q for keyword in OVERVIEW_KEYWORDS):
             print("ROUTER OVERRIDE -> VIDEO_OVERVIEW")

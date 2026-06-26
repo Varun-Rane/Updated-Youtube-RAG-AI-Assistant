@@ -10,3 +10,5 @@ faiss-cpu
 sentence-transformers
 huggingface-hub
 langchain-groq
+rank-bm25
+sentence-transformers>=2.7.0

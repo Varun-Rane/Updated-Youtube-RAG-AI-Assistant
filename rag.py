@@ -1,5 +1,3 @@
-from streamlit import context
-
 from llm import invoke_text
 from prompts import RAG_PROMPT
 from retriever import (
@@ -24,11 +22,16 @@ def run_rag(question, retriever, videos, history, chat_model, settings):
     if retriever is None:
         return unavailable_bundle("Load at least one transcript first.")
 
-    documents = retrieve_documents(retriever, question)
+    documents = retrieve_documents(
+        retriever,
+        question,
+        settings,
+    )
     context, retrieved_chunks = format_retrieved_context(
         documents, settings.max_context_chars
     )
 
+    # If we have no context at all, return the unavailable bundle early
     if not context.strip():
         return unavailable_bundle()
 
@@ -41,7 +44,7 @@ def run_rag(question, retriever, videos, history, chat_model, settings):
     print("RAG CONTEXT")
     print(context[:3000])
     print("=" * 80)
-    
+
     answer = invoke_text(chat_model, prompt)
 
     return {

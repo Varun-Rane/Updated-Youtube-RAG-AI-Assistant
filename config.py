@@ -77,6 +77,20 @@ class Settings:
     transcript_languages: tuple[str, ...]
     fetch_video_titles: bool
     memory_file: Path
+    # Hybrid retrieval configuration
+    bm25_top_k: int
+    dense_top_k: int
+    rrf_k: int
+    final_top_k: int
+    # Retrieval / reranking settings
+    rerank_model: str
+    rerank_top_n: int
+    dense_skip_threshold: float
+    rerank_top_score: float
+    rerank_avg_score: float
+    relevant_count_min: int
+    dedup_similarity: float
+    not_found_message: str
 
 
 def load_settings():
@@ -99,7 +113,7 @@ def load_settings():
         ),
         chunk_size=_int_env("CHUNK_SIZE", 1000),       # smaller = more precise retrieval
         chunk_overlap=_int_env("CHUNK_OVERLAP", 200),
-        top_k=_int_env("TOP_K", 6),                    # fetch more chunks for detail
+        top_k=_int_env("TOP_K", 10),                    # fetch more chunks for detail
         max_context_chars=_int_env("MAX_CONTEXT_CHARS", 3500),  # more context = better answers
         summary_context_chars=_int_env("SUMMARY_CONTEXT_CHARS", 8000),
         max_history_messages=_int_env("MAX_HISTORY_MESSAGES", 6),
@@ -108,5 +122,18 @@ def load_settings():
         temperature=_float_env("TEMPERATURE", 0.2),      # lower = more factual
         transcript_languages=languages or ("en",),
         fetch_video_titles=_bool_env("FETCH_VIDEO_TITLES", True),
+        # Retrieval / reranking settings (with sensible defaults)
+        rerank_model=_env("RERANK_MODEL", "BAAI/bge-reranker-base"),
+        rerank_top_n=_int_env("RERANK_TOP_N", 5),
+        dense_skip_threshold=_float_env("DENSE_SKIP_THRESHOLD", 0.88),
+        rerank_top_score=_float_env("RERANK_TOP_SCORE", 0.35),
+        rerank_avg_score=_float_env("RERANK_AVG_SCORE", 0.15),
+        relevant_count_min=_int_env("RELEVANT_COUNT_MIN", 2),
+        dedup_similarity=_float_env("DEDUP_SIMILARITY", 0.85),
+        not_found_message=_env("NOT_FOUND_MESSAGE", "I couldn't find this in the loaded video."),
+        bm25_top_k=_int_env("BM25_TOP_K", 50),
+        dense_top_k=_int_env("DENSE_TOP_K", 20),
+        rrf_k=_int_env("RRF_K", 60),
+        final_top_k=_int_env("FINAL_TOP_K", 8),
         memory_file=BASE_DIR / ".youtube_rag_memory.json",
     )

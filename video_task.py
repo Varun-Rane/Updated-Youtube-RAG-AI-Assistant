@@ -1,9 +1,7 @@
 from llm import invoke_text
 from prompts import FINAL_VIDEO_TASK_PROMPT
-from summary_cache import (
-    summary_exists,
-    get_master_summary,
-)
+from summary import _cache_key
+from summary_cache import get_master_summary
 
 
 def _unavailable_bundle():
@@ -28,15 +26,10 @@ def run_video_task(
     # Single video cache
     if len(videos) == 1:
 
-        video_id = videos[0]["video_id"]
+        cache_key = _cache_key(videos)
+        material = get_master_summary(cache_key)
 
-        if summary_exists(video_id):
-
-            material = get_master_summary(
-                video_id
-            )
-
-        else:
+        if not material:
 
             return {
                 "mode": "VIDEO_TASK",
@@ -55,19 +48,14 @@ def run_video_task(
 
         for video in videos:
 
-            video_id = video["video_id"]
+            cache_key = _cache_key([video])
+            summary = get_master_summary(cache_key)
 
-            if summary_exists(video_id):
-
-                summary = get_master_summary(
-                    video_id
+            if summary:
+                summaries.append(
+                    f"Video: {video['video_title']}\n\n"
+                    f"{summary}"
                 )
-
-                if summary:
-                    summaries.append(
-                        f"Video: {video['video_title']}\n\n"
-                        f"{summary}"
-                    )
 
         if not summaries:
 

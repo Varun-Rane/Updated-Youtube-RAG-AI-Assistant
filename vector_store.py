@@ -39,12 +39,9 @@ def build_vector_store(
         search_type="mmr",
 
         search_kwargs={
-
-            "k": 5,
-
-            "fetch_k": 15,
-
-        },
+            "k": settings.dense_top_k,
+            "fetch_k": max(settings.dense_top_k * 3, 20),
+        }
 
     )
 

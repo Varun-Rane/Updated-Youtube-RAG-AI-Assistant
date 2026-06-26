@@ -17,15 +17,25 @@ STRICT RULES:
 1. Answer ONLY from the retrieved transcript.
 2. Never use external knowledge.
 3. Never hallucinate.
-4. Never invent definitions.
-5. Never invent examples.
-6. Never invent steps.
-7. Never invent timestamps.
-8. If information is partially available, answer only the available part.
-9. If transcript is in Hindi, translate it into English before answering.
-10. If transcript contains relevant information, answer from it.
-11. Do NOT say "I couldn't find this" simply because the transcript is Hindi.
-12. Only say "I couldn't find this in the loaded video." when the retrieved transcript genuinely does not contain the answer.
+4. Never infer.
+5. Never guess.
+6. Never complete missing information.
+7. Never use prior knowledge.
+8. Never explain concepts that are absent from the transcript.
+9. If the retrieved transcript does NOT explicitly answer the user's question, reply with exactly:
+
+   I couldn't find this in the loaded video.
+10. Do NOT write phrases such as:
+    - However...
+    - Generally...
+    - Usually...
+    - In practice...
+    - Outside the transcript...
+    - Although...
+    - Typically...
+    - According to my knowledge...
+11. If transcript is Hindi/Hinglish, translate it internally and answer in English.
+12. Use ONLY information explicitly supported by the retrieved transcript.
 
 Conversation History:
 {history}
@@ -36,29 +46,35 @@ Retrieved Transcript:
 Question:
 {question}
 
-Return in EXACTLY this format:
+Return in EXACTLY ONE of the following formats.
+
+----------------------------------------
+
+IF the transcript contains enough information to answer:
 
 ## Answer
-<answer derived only from transcript>
+<answer using ONLY transcript facts>
 
 ## Evidence
-- Timestamp: <timestamp from transcript>
+- Timestamp: <most relevant timestamp>
 - Transcript Fact: <fact directly supported by transcript>
 
 ## Source Video
 <video title>
 
-If multiple transcript chunks contribute to the answer:
-- Combine them.
-- Mention the most relevant timestamp.
-- Keep the answer concise and factual.
+----------------------------------------
 
-Never mention:
-- "According to the context"
-- "Based on the provided context"
-- "The transcript says"
+IF the transcript does NOT explicitly contain the answer:
 
-Just answer naturally.
+## Answer
+
+I couldn't find this in the loaded video.
+
+Do NOT generate:
+- Evidence
+- Source Video
+
+Stop immediately.
 """
 
 SUMMARY_CHUNK_PROMPT = """
@@ -305,7 +321,6 @@ VIDEO_QA
 - What is Vector Database
 - How does LangChain work
 - Any content-specific question
-- What is this video about
 
 VIDEO_SUMMARY
 - Full summary
@@ -427,13 +442,19 @@ VIDEO_QA
 - Ask information from video
 - Explain concepts
 - Answer questions
+- What is Quantum Computing in this video?
+- Does this video explain HNSW?
+- Does the lecture mention Kubernetes?
+- Is Blockchain discussed?
+- Explain IVF from this video.
+- What does the speaker say about Product Quantization?
 
 VIDEO_OVERVIEW
-- What is the video about
-- Topics discussed
-- Timeline
-- Main concepts
-- Key takeaways
+- What is this video about?
+- Give me an overview.
+- What are the main topics?
+- Summarize the overall lecture.
+- What are the key takeaways?
 
 VIDEO_SUMMARY
 - Generate notes
