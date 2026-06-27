@@ -1,0 +1,93 @@
+[
+  {
+    "_comment": "=== BENCHMARK v2 — Curated, tight chunk sets ===",
+    "_instructions": [
+      "Each question has 3-8 core chunks only — the ones that directly define or explain the concept.",
+      "Intro/transition/wrap-up chunks are excluded to avoid inflating Recall and MRR.",
+      "Negative questions have empty expected_chunk_indices by design.",
+      "This benchmark is suitable for Phase 1 validation and regression testing into Phase 2."
+    ]
+  },
+  {
+    "id": "q001",
+    "question": "What is HNSW?",
+    "expected_chunk_indices": [118, 119, 120, 121, 122, 124, 126, 127, 206, 207],
+    "expected_timestamp": "42:45",
+    "expected_topics": ["HNSW", "Hierarchical Navigable Small World", "graph layers"],
+    "notes": "HNSW starts at chunk 118 (42:45) — instructor introduces the graph concept, connects nearest nodes, and builds layers. Chunks 119-122 cover node connections and nearest-neighbor graph building. Chunks 124, 126, 127 cover layer promotion and multi-layer structure. Chunks 206-207 contain the explicit final comparison where HNSW is named. BSP/KD-tree chunks (74-117) are intentionally excluded — different algorithm."
+  },
+  {
+    "id": "q002",
+    "question": "Explain IVF.",
+    "expected_chunk_indices": [43, 44, 45, 46, 47, 48, 49, 50, 200, 201, 202],
+    "expected_timestamp": "15:41",
+    "expected_topics": ["IVF", "Inverted File Index", "clustering", "centroid"],
+    "notes": "IVF core: chunk 43 introduces आईबीएफ/Inverted File Index. Chunks 44-50 cover centroid selection, cluster assignment, and searching only the nearest cluster. Chunks 200-202 cover IVF+PQ combination. Chunks 51-62 are the extended worked example — excluded to keep the set tight."
+  },
+  {
+    "id": "q003",
+    "question": "What is Product Quantization?",
+    "expected_chunk_indices": [157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 196],
+    "expected_timestamp": "57:14",
+    "expected_topics": ["Product Quantization", "PQ", "codebook", "compression", "segments"],
+    "notes": "PQ core starts at chunk 157 (57:14) — 'compress this vector'. Chunks 158-167 cover segment splitting, codebook construction, and index assignment. Chunk 196 has the key memory savings calculation (6144 bytes → 12 bytes). Chunks 168-195 are the detailed distance-table lookup walkthrough — important but not the definition, so excluded from core set."
+  },
+  {
+    "id": "q004",
+    "question": "How does vector search work?",
+    "expected_chunk_indices": [4, 5, 15, 16, 17, 18, 19, 20],
+    "expected_timestamp": "01:21",
+    "expected_topics": ["vector search", "nearest neighbor", "Euclidean distance", "brute force"],
+    "notes": "Core vector search explanation: chunk 4 introduces distance between vectors, chunks 5 and 15-20 cover finding nearest neighbors via Euclidean distance and brute-force scan across all items. Chunks 2-3 are intro/framing, chunks 21-27 are Euclidean formula derivation — all excluded."
+  },
+  {
+    "id": "q005",
+    "question": "What is a vector database?",
+    "expected_chunk_indices": [7, 8, 9, 10, 209, 210, 211],
+    "expected_timestamp": "02:30",
+    "expected_topics": ["vector database", "Milvus", "pgvector", "architecture"],
+    "notes": "Chunk 7 (02:30) introduces vector database concept. Chunks 8-10 cover internal architecture and why older databases were not used. Chunks 209-211 list real vector database products (Milvus, pgvector, etc.). Chunk 11 is a design-level question, not a definition — excluded."
+  },
+  {
+    "id": "q006",
+    "question": "Explain approximate nearest neighbor search.",
+    "expected_chunk_indices": [29, 30, 31, 32, 33, 34, 35],
+    "expected_timestamp": "10:49",
+    "expected_topics": ["ANN", "approximate nearest neighbor", "accuracy vs speed tradeoff"],
+    "notes": "ANN introduced at chunk 29 (10:49) contrasting with exact search. Chunks 30-35 cover the accuracy vs speed trade-off and the motivation for ANN. This is a tight, self-contained section."
+  },
+  {
+    "id": "q007",
+    "question": "What is cosine similarity?",
+    "expected_chunk_indices": [22, 23],
+    "expected_timestamp": "08:14",
+    "expected_topics": ["cosine similarity", "distance metric"],
+    "notes": "Cosine similarity is briefly mentioned at chunks 22-23 (08:14-09:02) as an alternative to Euclidean distance. It is not deeply explained in this video — expect lower Recall here. This is intentional: a good retriever should still find these two chunks."
+  },
+  {
+    "id": "q008",
+    "question": "What is the difference between IVF and HNSW?",
+    "expected_chunk_indices": [206, 207, 208, 43, 118],
+    "expected_timestamp": "1:15:55",
+    "expected_topics": ["IVF vs HNSW", "comparison", "speed", "accuracy", "memory"],
+    "notes": "Chunk 206 (1:15:55) is the direct comparison: HNSW (high speed, high accuracy, high memory) vs IVF (lower accuracy, low memory). Chunks 207-208 complete the comparison table. Chunks 43 and 118 are the IVF and HNSW definition entry points — included so a retriever that finds the definitions also scores well on this comparison query."
+  },
+  {
+    "id": "q009",
+    "is_negative": true,
+    "question": "What is Kubernetes?",
+    "expected_chunk_indices": [],
+    "expected_timestamp": "",
+    "expected_topics": [],
+    "notes": "NEGATIVE — Kubernetes is not discussed in this video. Retriever should return irrelevant or low-confidence results. Used to test precision."
+  },
+  {
+    "id": "q010",
+    "is_negative": true,
+    "question": "Explain Quantum Computing.",
+    "expected_chunk_indices": [],
+    "expected_timestamp": "",
+    "expected_topics": [],
+    "notes": "NEGATIVE — Quantum Computing is not discussed in this video. Used to test precision."
+  }
+]
