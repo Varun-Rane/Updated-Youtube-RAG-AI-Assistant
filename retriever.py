@@ -102,16 +102,15 @@ def retrieve_documents(
     global _HYBRID_SINGLETON, _HYBRID_DOC_SIGNATURE
     # Determine a signature for the current corpus (set of video IDs).
     current_docs = get_all_documents(retriever)
+    # Build a robust signature for the current corpus.
+    # Use the total document count and the sorted set of video IDs present.
+    # This changes whenever videos are added/removed, ensuring the BM25 index
+    # is rebuilt when the underlying transcript collection changes.
+    video_ids = {doc.metadata.get("video_id") for doc in current_docs}
     current_signature = (
-    len(current_docs),
-    tuple(
-        (
-            doc.metadata.get("video_id"),
-            doc.metadata.get("chunk_index")
-        )
-        for doc in current_docs[:20]
+        len(current_docs),
+        tuple(sorted(video_ids))
     )
-)
     if (
         _HYBRID_SINGLETON is None
         or _HYBRID_DOC_SIGNATURE != current_signature

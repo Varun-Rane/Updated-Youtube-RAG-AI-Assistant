@@ -35,14 +35,10 @@ def build_vector_store(
     )
 
     retriever = vectorstore.as_retriever(
-
-        search_type="mmr",
-
-        search_kwargs={
-            "k": settings.dense_top_k,
-            "fetch_k": max(settings.dense_top_k * 3, 20),
-        }
-
+    search_type="similarity",
+    search_kwargs={
+        "k": settings.dense_top_k,
+    },
     )
 
     return vectorstore, retriever

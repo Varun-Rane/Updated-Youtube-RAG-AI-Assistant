@@ -91,6 +91,11 @@ class Settings:
     relevant_count_min: int
     dedup_similarity: float
     not_found_message: str
+    # Phase 1 acceptance thresholds
+    phase1_hit_target: float
+    phase1_recall_target: float
+    phase1_mrr_target: float
+    phase1_neg_precision_target: float
 
 
 def load_settings():
@@ -131,6 +136,11 @@ def load_settings():
         relevant_count_min=_int_env("RELEVANT_COUNT_MIN", 2),
         dedup_similarity=_float_env("DEDUP_SIMILARITY", 0.85),
         not_found_message=_env("NOT_FOUND_MESSAGE", "I couldn't find this in the loaded video."),
+        # Phase 1 acceptance thresholds
+        phase1_hit_target=_float_env("PHASE1_HIT_TARGET", 0.90),
+        phase1_recall_target=_float_env("PHASE1_RECALL_TARGET", 0.50),
+        phase1_mrr_target=_float_env("PHASE1_MRR_TARGET", 0.50),
+        phase1_neg_precision_target=_float_env("PHASE1_NEG_PRECISION_TARGET", 0.95),
         bm25_top_k=_int_env("BM25_TOP_K", 50),
         dense_top_k=_int_env("DENSE_TOP_K", 20),
         rrf_k=_int_env("RRF_K", 60),
