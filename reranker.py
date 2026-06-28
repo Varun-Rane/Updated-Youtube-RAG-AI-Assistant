@@ -121,6 +121,7 @@ class Reranker:
         self,
         query: str,
         raw_docs: List[Tuple[Any, Dict]],
+        top_n: Optional[int] = None,
     ) -> List[RerankedDoc]:
         """Score every (query, document) pair and return top-N, best first.
 
@@ -129,13 +130,19 @@ class Reranker:
         query    : The original user question, unmodified.
         raw_docs : List[Tuple[Document, scores_dict]] as returned by
                    HybridRetriever.retrieve_with_scores().
+        top_n    : Override for how many results to return.  When None,
+                   falls back to self._top_n (settings.rerank_top_n).
+                   Pass compute_dynamic_top_k() here so there is a single
+                   Top-K control rather than reranking then slicing.
 
         Returns
         -------
-        List[RerankedDoc] sorted by rerank_score descending, length <= rerank_top_n.
+        List[RerankedDoc] sorted by rerank_score descending, length <= top_n.
         """
         if not raw_docs:
             return []
+
+        effective_top_n = top_n if top_n is not None else self._top_n
 
         # Build (query, text) pairs for batch scoring.
         pairs = [(query, doc.page_content) for doc, _ in raw_docs]
@@ -156,12 +163,12 @@ class Reranker:
 
         reranked.sort(key=lambda r: r.rerank_score, reverse=True)
 
-        top = reranked[: self._top_n]
+        top = reranked[: effective_top_n]
 
         logger.debug(
             "Reranked %d docs → top %d | scores: %s",
             len(reranked),
-            self._top_n,
+            effective_top_n,
             [f"{r.rerank_score:.3f}" for r in top],
         )
 

@@ -14,10 +14,16 @@ Pipeline
     HybridRetriever  (BM25 + FAISS + RRF)  → top 20 candidates with scores
         │
         ▼
-    Reranker  (CrossEncoder)  → top N docs, best first
+    Reranker  (CrossEncoder)  → top N docs, best first   [Phase 2.1]
         │
         ▼
-    Deduplicate + return
+    Dynamic Top-K selection                              [Phase 2.4]
+        │
+        ▼
+    Adjacent chunk expansion                             [Phase 2.3]
+        │
+        ▼
+    Return merged, ranked docs
 
 Public surface used by rag.py (unchanged):
     retrieve_documents(retriever, question, settings) -> List[RerankedDoc]
@@ -116,6 +122,112 @@ def _get_hybrid(retriever, settings) -> HybridRetriever:
 # Main retrieval entry point
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Phase 2.4 — Dynamic Top-K
+# ---------------------------------------------------------------------------
+
+_LARGE_K_WORDS  = {"compare", "comparison", "difference", "differences",
+                   "advantages", "disadvantages", "pros", "cons",
+                   "versus", "vs", "contrast", "between"}
+_SMALL_K_WORDS  = {"what", "define", "definition", "who", "when", "where",
+                   "which", "is", "are", "does"}
+
+
+def compute_dynamic_top_k(question: str, settings) -> int:
+    """Return a top-k value scaled to the breadth of the question.
+
+    Rules (in priority order):
+        broad / comparison keywords  →  top_k_large  (default 8)
+        narrow / definition keywords →  top_k_small  (default 3)
+        everything else              →  top_k_medium (default 5)
+
+    All three values come from settings so they can be tuned via .env
+    without touching code.
+    """
+    if not settings.dynamic_top_k:
+        return settings.top_k_medium
+
+    tokens = set(re.findall(r"\w+", question.lower()))
+
+    if tokens & _LARGE_K_WORDS:
+        return settings.top_k_large
+    if tokens & _SMALL_K_WORDS:
+        return settings.top_k_small
+    return settings.top_k_medium
+
+
+# ---------------------------------------------------------------------------
+# Phase 2.3 — Adjacent Chunk Expansion
+# ---------------------------------------------------------------------------
+
+def _expand_adjacent_chunks(
+    reranked: list,
+    all_docs: list,
+    settings,
+) -> list:
+    """Expand each reranked doc to include its neighbours from the same video.
+
+    For every RerankedDoc at chunk_index N, we include chunks N-before … N+after
+    from the same video.  The result preserves the reranker's priority order:
+    the neighbours of the top-ranked chunk come first, then the neighbours of
+    the second-ranked chunk, and so on.  Chunks already present are not
+    duplicated.
+
+    Parameters
+    ----------
+    reranked  : List[RerankedDoc] sorted best-first by reranker.
+    all_docs  : All Document objects from the vectorstore (used as the chunk pool).
+    settings  : Settings — reads merge_adjacent_chunks, adjacent_chunks_before,
+                adjacent_chunks_after.
+
+    Returns
+    -------
+    List[RerankedDoc | Document] in merged priority order.
+    """
+    if not settings.merge_adjacent_chunks or not reranked:
+        return reranked
+
+    n_before = settings.adjacent_chunks_before
+    n_after  = settings.adjacent_chunks_after
+
+    # Build a lookup: (video_id, chunk_index) → Document
+    pool: dict = {}
+    for doc in all_docs:
+        vid = doc.metadata.get("video_id", "")
+        idx = doc.metadata.get("chunk_index")
+        if idx is not None:
+            pool[(vid, int(idx))] = doc
+
+    merged  = []
+    seen    = set()   # (video_id, chunk_index) already added
+
+    for ranked_doc in reranked:
+        vid   = ranked_doc.metadata.get("video_id", "")
+        pivot = ranked_doc.metadata.get("chunk_index")
+        if pivot is None:
+            # No chunk_index metadata — pass through as-is.
+            key = id(ranked_doc)
+            if key not in seen:
+                seen.add(key)
+                merged.append(ranked_doc)
+            continue
+
+        pivot = int(pivot)
+        window = range(pivot - n_before, pivot + n_after + 1)
+
+        for idx in window:
+            key = (vid, idx)
+            if key in seen:
+                continue
+            seen.add(key)
+            if idx == pivot:
+                merged.append(ranked_doc)          # keep RerankedDoc with scores
+            elif key in pool:
+                merged.append(pool[key])           # plain Document neighbour
+
+    return merged
+
+
 def retrieve_documents(retriever, question, settings) -> list:
     """Full retrieval pipeline: hybrid → rerank → deduplicate.
 
@@ -199,7 +311,17 @@ def retrieve_documents(retriever, question, settings) -> list:
                 f"  {ts}"
             )
 
-    reranked = reranker.rerank(question, raw_pairs)
+    # ------------------------------------------------------------------ 5
+    # Phase 2.4 — Dynamic Top-K fed directly into reranker.
+    # One source of truth: reranker returns exactly top_n docs.
+    # No post-rerank slice needed.
+    # ------------------------------------------------------------------ 5
+    top_n = min(compute_dynamic_top_k(question, settings), len(raw_pairs))
+
+    if settings.debug_reranker:
+        print(f"[dynamic_top_k] top_n={top_n}")
+
+    reranked = reranker.rerank(question, raw_pairs, top_n=top_n)
 
     if settings.debug_reranker:
         print(DIV)
@@ -215,7 +337,21 @@ def retrieve_documents(retriever, question, settings) -> list:
             )
         print(SEP)
 
-    return reranked
+    # ------------------------------------------------------------------ 6
+    # Phase 2.3 — Adjacent chunk expansion.
+    # ------------------------------------------------------------------ 6
+    all_docs = get_all_documents(retriever)
+    merged   = _expand_adjacent_chunks(reranked, all_docs, settings)
+
+    if settings.debug_reranker:
+        print(f"[adjacent_merge] {len(reranked)} reranked → {len(merged)} after expansion")
+        for i, d in enumerate(merged, 1):
+            ts  = d.metadata.get("timestamp_range", d.metadata.get("timestamp", "N/A"))
+            idx = d.metadata.get("chunk_index", "?")
+            print(f"  {i:2d}.  chunk={idx}  {ts}")
+        print("=" * 80)
+
+    return merged
 
 
 # ---------------------------------------------------------------------------

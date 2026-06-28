@@ -94,6 +94,18 @@ class Settings:
     relevant_count_min: int
     dedup_similarity: float
     not_found_message: str
+    # Phase 2.3 — Adjacent chunk merging
+    merge_adjacent_chunks: bool  # expand each result to include neighbouring chunks
+    adjacent_chunks_before: int  # how many chunks to prepend
+    adjacent_chunks_after: int   # how many chunks to append
+    # Phase 2.4 — Dynamic Top-K
+    dynamic_top_k: bool          # vary rerank_top_n based on question complexity
+    top_k_small: int             # narrow questions: what/define/who
+    top_k_medium: int            # default
+    top_k_large: int             # broad/comparison questions
+    # Phase 2.5 — Answer verification
+    verify_answer: bool          # run LLM verification pass after generation
+    verification_min_support: int  # minimum transcript facts that must back the answer
     # Phase 1 acceptance thresholds
     phase1_hit_target: float
     phase1_recall_target: float
@@ -142,6 +154,15 @@ def load_settings():
         relevant_count_min=_int_env("RELEVANT_COUNT_MIN", 2),
         dedup_similarity=_float_env("DEDUP_SIMILARITY", 0.85),
         not_found_message=_env("NOT_FOUND_MESSAGE", "I couldn't find this in the loaded video."),
+        merge_adjacent_chunks=_bool_env("MERGE_ADJACENT_CHUNKS", True),
+        adjacent_chunks_before=_int_env("ADJACENT_CHUNKS_BEFORE", 1),
+        adjacent_chunks_after=_int_env("ADJACENT_CHUNKS_AFTER", 1),
+        dynamic_top_k=_bool_env("DYNAMIC_TOP_K", True),
+        top_k_small=_int_env("TOP_K_SMALL", 3),
+        top_k_medium=_int_env("TOP_K_MEDIUM", 5),
+        top_k_large=_int_env("TOP_K_LARGE", 8),
+        verify_answer=_bool_env("VERIFY_ANSWER", False),
+        verification_min_support=_int_env("VERIFICATION_MIN_SUPPORT", 1),
         # Phase 1 acceptance thresholds
         phase1_hit_target=_float_env("PHASE1_HIT_TARGET", 0.90),
         phase1_recall_target=_float_env("PHASE1_RECALL_TARGET", 0.50),

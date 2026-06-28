@@ -1,5 +1,5 @@
 from llm import invoke_text
-from prompts import RAG_PROMPT
+from prompts import RAG_PROMPT, VERIFY_PROMPT
 from retriever import (
     retrieve_documents,
     format_retrieved_context,
@@ -16,6 +16,65 @@ def unavailable_bundle(message="I couldn't find this in the loaded video."):
         "source_videos": [],
         "retrieved_chunks": [],
     }
+
+
+def _parse_verify_response(response: str) -> tuple:
+    """Parse SUPPORTED / TOTAL / VERDICT lines from the verifier LLM response.
+
+    Returns (supported: int, total: int, verdict: str).
+    Falls back to (0, 1, 'FAIL') if parsing fails so the caller always gets
+    a safe result rather than an exception.
+    """
+    supported, total, verdict = 0, 1, "FAIL"
+    for line in response.splitlines():
+        line = line.strip()
+        if line.startswith("SUPPORTED:"):
+            try:
+                supported = int(line.split(":", 1)[1].strip())
+            except ValueError:
+                pass
+        elif line.startswith("TOTAL:"):
+            try:
+                total = int(line.split(":", 1)[1].strip())
+            except ValueError:
+                pass
+        elif line.startswith("VERDICT:"):
+            verdict = line.split(":", 1)[1].strip().upper()
+    return supported, total, verdict
+
+
+def verify_answer(answer, question, context, chat_model, settings) -> bool:
+    """Run a second LLM call to verify every claim in `answer` is in `context`.
+
+    Returns True (keep the answer) or False (reject it).
+
+    Skipped when settings.verify_answer is False so there is zero latency
+    cost in production until the feature is explicitly enabled.
+    """
+    if not settings.verify_answer:
+        return True
+
+    prompt   = VERIFY_PROMPT.format(
+        question=question,
+        answer=answer,
+        context=context,
+    )
+    response = invoke_text(chat_model, prompt)
+
+    supported, total, verdict = _parse_verify_response(response)
+
+    if settings.debug_reranker:
+        print("=" * 80)
+        print("ANSWER VERIFICATION")
+        print(f"  Supported claims : {supported} / {total}")
+        print(f"  Verdict          : {verdict}")
+        print("=" * 80)
+
+    # Accept if the verifier says PASS and at least min_support claims are backed.
+    return (
+        verdict == "PASS"
+        and supported >= settings.verification_min_support
+    )
 
 
 def confidence_gate(documents, settings):
@@ -119,6 +178,17 @@ def run_rag(question, retriever, videos, history, chat_model, settings):
     print("=" * 80)
 
     answer = invoke_text(chat_model, prompt)
+
+    # ------------------------------------------------------------------ 5
+    # Phase 2.5 — Answer verification.
+    # A second LLM call checks every claim in the answer against the context.
+    # Disabled by default (VERIFY_ANSWER=false) to avoid extra latency.
+    # ------------------------------------------------------------------ 5
+    if not verify_answer(answer, question, context, chat_model, settings):
+        return unavailable_bundle(
+            "I found relevant transcript sections but could not verify a "
+            "fully supported answer. Please try rephrasing your question."
+        )
 
     return {
         "mode": "VIDEO_QA",
