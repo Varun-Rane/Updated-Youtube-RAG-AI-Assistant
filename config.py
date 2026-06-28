@@ -85,6 +85,9 @@ class Settings:
     # Retrieval / reranking settings
     rerank_model: str
     rerank_top_n: int
+    rerank_batch_size: int       # predict() batch size; increase for GPU inference
+    hybrid_fetch_k: int          # candidates sent from HybridRetriever to CrossEncoder
+    debug_reranker: bool         # print pre/post rerank rankings on every query
     dense_skip_threshold: float
     rerank_top_score: float
     rerank_avg_score: float
@@ -130,6 +133,9 @@ def load_settings():
         # Retrieval / reranking settings (with sensible defaults)
         rerank_model=_env("RERANK_MODEL", "BAAI/bge-reranker-base"),
         rerank_top_n=_int_env("RERANK_TOP_N", 5),
+        rerank_batch_size=_int_env("RERANK_BATCH_SIZE", 16),
+        hybrid_fetch_k=_int_env("HYBRID_FETCH_K", 20),
+        debug_reranker=_bool_env("DEBUG_RERANKER", False),
         dense_skip_threshold=_float_env("DENSE_SKIP_THRESHOLD", 0.88),
         rerank_top_score=_float_env("RERANK_TOP_SCORE", 0.35),
         rerank_avg_score=_float_env("RERANK_AVG_SCORE", 0.15),

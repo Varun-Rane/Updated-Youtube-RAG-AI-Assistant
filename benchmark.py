@@ -234,7 +234,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--benchmark", default="evaluation/benchmark.json",
-        help="Path to benchmark.json (default: evaluation/benchmark.json)"
+        help="Path to benchmark.json (default: /benchmark.json)"
     )
     parser.add_argument(
         "--top-k", nargs="+", type=int, default=[5, 10],
