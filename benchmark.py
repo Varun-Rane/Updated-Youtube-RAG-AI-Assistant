@@ -111,7 +111,7 @@ def _build_retriever(video_urls: List[str], settings, loader_mod, vs_mod):
     return vectorstore, videos, all_chunks
 
 
-def _run_query(hybrid, question: Dict, top_k: int, tolerance: int = 0) -> Dict:
+def _run_query(hybrid, question: Dict, top_k: int, settings: Any, tolerance: int = 0) -> Dict:
     """Retrieve for one benchmark question and return a result dict."""
     q_text = question["question"]
     expected = question.get("expected_chunk_indices", [])
@@ -119,7 +119,10 @@ def _run_query(hybrid, question: Dict, top_k: int, tolerance: int = 0) -> Dict:
     is_negative = question.get("is_negative", False)
 
     # Retrieve once and slice immediately so all downstream lists are consistent.
-    scored = hybrid.retrieve_with_scores(q_text, top_k=max(top_k, 10))
+    scored = hybrid.retrieve_with_scores(
+        q_text,
+        top_k=max(top_k, settings.final_top_k)
+    )
     scored = scored[:top_k]  # single authoritative slice
 
     retrieved_indices = [
@@ -317,7 +320,7 @@ def main() -> None:
 
     results: List[Dict] = []
     for q in questions:
-        result = _run_query(hybrid, q, top_k=max_k, tolerance=args.tolerance)
+        result = _run_query(hybrid, q, top_k=max_k, settings=settings, tolerance=args.tolerance)
         results.append(result)
         _print_question_result(result, k_values)
 
@@ -402,4 +405,4 @@ def _print_phase1_status(aggregate: Dict, k_values: List[int], settings: Any) ->
 
 
 if __name__ == "__main__":
-    main()  
+    main()

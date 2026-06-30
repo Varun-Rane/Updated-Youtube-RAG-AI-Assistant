@@ -274,7 +274,7 @@ def retrieve_documents(retriever, question, settings) -> list:
 
     raw_pairs: list = []
     seen      = set()
-    fetch_k   = settings.hybrid_fetch_k
+    fetch_k   = max(settings.hybrid_fetch_k, settings.dense_top_k)
 
     for term in terms:
         term_pairs = hybrid.retrieve_with_scores(term, top_k=fetch_k)
@@ -317,7 +317,11 @@ def retrieve_documents(retriever, question, settings) -> list:
     # One source of truth: reranker returns exactly top_n docs.
     # No post-rerank slice needed.
     # ------------------------------------------------------------------ 5
-    top_n = min(compute_dynamic_top_k(question, settings), len(raw_pairs))
+    top_n = min(
+        compute_dynamic_top_k(question, settings),
+        len(raw_pairs),
+        settings.rerank_top_n,
+    )
 
     if settings.debug_reranker:
         print(f"[dynamic_top_k] top_n={top_n}")
