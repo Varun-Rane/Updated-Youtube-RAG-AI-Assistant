@@ -1,0 +1,26 @@
+id,question,is_negative,expected_chunks,retrieved_chunks,recall@5,precision@5,ndcg@5,hit@5,recall@10,precision@10,ndcg@10,hit@10,mrr,timestamp_hit
+q001,What is HNSW?,False,"[118, 119, 120, 121, 122, 124, 126, 127, 206, 207]",[25],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+q002,Explain IVF.,False,"[43, 44, 45, 46, 47, 48, 49, 50, 200, 201, 202]",[25],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+q003,What is Product Quantization?,False,"[157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 196]",[238],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+q004,How does vector search work?,False,"[4, 5, 15, 16, 17, 18, 19, 20]",[44],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+q005,What is a vector database?,False,"[7, 8, 9, 10, 209, 210, 211]",[61],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+q006,Explain approximate nearest neighbor search.,False,"[29, 30, 31, 32, 33, 34, 35]",[34],0.14285714285714285,0.2,0.3391602052736161,1.0,0.14285714285714285,0.1,0.27487633291429087,1.0,1.0,False
+q007,What is cosine similarity?,False,"[22, 23]",[26],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+q008,What is the difference between IVF and HNSW?,False,"[206, 207, 208, 43, 118]",[67],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+q009,What is Kubernetes?,True,[],[173],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+q010,Explain Quantum Computing.,True,[],[26],0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,False
+
+# AGGREGATE
+# recall@5,0.0179
+# precision@5,0.025
+# ndcg@5,0.0424
+# hit@5,0.125
+# recall@10,0.0179
+# precision@10,0.0125
+# ndcg@10,0.0344
+# hit@10,0.125
+# mrr,0.125
+# neg_precision@5,0.0
+# neg_precision@10,0.0
+# n_positive,8
+# n_negative,2

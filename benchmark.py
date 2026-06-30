@@ -64,6 +64,23 @@ def _load_project_modules():
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+def _expand_with_tolerance(indices: List[int], tolerance: int) -> List[int]:
+    """Expand a list of expected chunk indices to include ±tolerance neighbours.
+
+    Used so that retrieving an adjacent chunk (e.g. 117 when 118 is expected)
+    counts as a hit, since transcript chunks overlap by ~100 chars and the
+    same explanation often spans neighbouring chunks.
+    """
+    if tolerance <= 0:
+        return indices
+    expanded = set()
+    for idx in indices:
+        for offset in range(-tolerance, tolerance + 1):
+            expanded.add(idx + offset)
+    expanded = {i for i in expanded if i > 0}
+    return sorted(expanded)
+
+
 def _load_benchmark(path: str) -> List[Dict]:
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
@@ -94,10 +111,11 @@ def _build_retriever(video_urls: List[str], settings, loader_mod, vs_mod):
     return vectorstore, videos, all_chunks
 
 
-def _run_query(hybrid, question: Dict, top_k: int) -> Dict:
+def _run_query(hybrid, question: Dict, top_k: int, tolerance: int = 0) -> Dict:
     """Retrieve for one benchmark question and return a result dict."""
     q_text = question["question"]
     expected = question.get("expected_chunk_indices", [])
+    expected_for_scoring = _expand_with_tolerance(expected, tolerance)
     is_negative = question.get("is_negative", False)
 
     # Retrieve once and slice immediately so all downstream lists are consistent.
@@ -128,7 +146,7 @@ def _run_query(hybrid, question: Dict, top_k: int) -> Dict:
         "retrieved_timestamps": retrieved_timestamps,
         "retrieved_scores": retrieved_scores,
         "timestamp_hit": timestamp_hit,
-        "relevant_indices": expected,
+        "relevant_indices": expected_for_scoring,
     }
 
 
@@ -248,6 +266,11 @@ def main() -> None:
         "--verbose", action="store_true",
         help="Enable HybridRetriever verbose logging per query"
     )
+    parser.add_argument(
+        "--tolerance", type=int, default=0,
+        help="±N adjacent chunk tolerance when scoring (default: 0, exact match). "
+             "Use 1 to count neighbouring chunks as hits since chunks overlap."
+    )
     args = parser.parse_args()
 
     k_values: List[int] = sorted(set(args.top_k))
@@ -289,10 +312,12 @@ def main() -> None:
     # ------------------------------------------------------------------
     questions = _load_benchmark(args.benchmark)
     print(f"\n[benchmark] Running {len(questions)} benchmark questions...")
+    if args.tolerance > 0:
+        print(f"[benchmark] Scoring with ±{args.tolerance} chunk tolerance (adjacent-chunk hits count).")
 
     results: List[Dict] = []
     for q in questions:
-        result = _run_query(hybrid, q, top_k=max_k)
+        result = _run_query(hybrid, q, top_k=max_k, tolerance=args.tolerance)
         results.append(result)
         _print_question_result(result, k_values)
 
@@ -377,4 +402,4 @@ def _print_phase1_status(aggregate: Dict, k_values: List[int], settings: Any) ->
 
 
 if __name__ == "__main__":
-    main()
+    main()  

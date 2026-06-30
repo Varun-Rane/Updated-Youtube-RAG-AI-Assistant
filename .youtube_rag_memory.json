@@ -5,14 +5,22 @@
   },
   {
     "role": "assistant",
-    "content": "## Answer\nHNSW is the best method.\n\n## Evidence\n- Timestamp: 1:15:33 - 1:15:59\n- Transcript Fact: HNSW \u0938\u092c\u0938\u0947 \u092c\u0947\u0938\u094d\u091f \u0939\u0948\u0964"
+    "content": "I couldn't find this in the loaded video."
   },
   {
     "role": "user",
-    "content": "What is IVF?"
+    "content": "What is HNSW?"
   },
   {
     "role": "assistant",
-    "content": "## Answer\nIVF is a method used in combination with product condition.\n\n## Evidence\n- Timestamp: 1:15:33 - 1:15:59\n- Transcript Fact: \u0906\u092a\u0928\u0947 \u0906\u0908\u0935\u0940\u090f\u092b \u0915\u094b \u0914\u0930 \u092a\u094d\u0930\u094b\u0921\u0915\u094d\u091f \u0915\u0902\u0921\u0940\u0936\u0928 \u0915\u094b \u092e\u093f\u0915\u094d\u0938 \u0905\u092a \u0915\u0930\u0915\u0947 \u0907\u0938\u094d\u0924\u0947\u092e\u093e\u0932 \u0915\u093f\u092f\u093e \u0939\u0948\u0964"
+    "content": "## Answer\nI couldn't find this in the loaded video."
+  },
+  {
+    "role": "user",
+    "content": "What is HNSW?"
+  },
+  {
+    "role": "assistant",
+    "content": "## Answer\nHNSW is the best method. Its speed is very high. Accuracy is also very high. Memory usage is very high.\n\n## Evidence\n- Timestamp: 1:15:55 - 1:16:22\n- Transcript Fact: HNSW \u0938\u092c\u0938\u0947 \u092c\u0947\u0938\u094d\u091f \u0939\u0948\u0964 \u0907\u0938\u0915\u0940 \u0938\u094d\u092a\u0940\u0921 \u092c\u0939\u0941\u0924 \u0939\u0940 \u0939\u093e\u0908\u090f\u0938\u094d\u091f \u0939\u0948\u0964 \u090f\u0915\u094d\u092f\u0942\u0930\u0947\u0938\u0940 \u092c\u0939\u0941\u0924 \u0939\u093e\u0908\u090f\u0938\u094d\u091f \u0939\u0948\u0964 \u092e\u0947\u092e\u094b\u0930\u0940 \u092f\u0942\u091c\u0947\u091c \u092c\u0939\u0941\u0924 \u091c\u094d\u092f\u093e\u0926\u093e \u0939\u0948\u0964"
   }
 ]

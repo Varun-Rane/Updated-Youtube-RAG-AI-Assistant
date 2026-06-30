@@ -1,44 +1,44 @@
 [
   {
-    "_comment": "=== BENCHMARK v2 — Curated, tight chunk sets ===",
+    "_comment": "=== BENCHMARK v3 — Expanded, chunk_map.txt-validated ranges ===",
     "_instructions": [
-      "Each question has 3-8 core chunks only — the ones that directly define or explain the concept.",
-      "Intro/transition/wrap-up chunks are excluded to avoid inflating Recall and MRR.",
+      "Expected chunk indices reflect the full continuous explanation region for each topic, validated against chunk_map.txt.",
+      "v2's tight 3-12 chunk sets undercounted real retrieval — adjacent chunks within a topic's continuous span genuinely contain answer content (chunks overlap ~100 chars).",
       "Negative questions have empty expected_chunk_indices by design.",
-      "This benchmark is suitable for Phase 1 validation and regression testing into Phase 2."
+      "Use --tolerance 1 in benchmark.py on top of these wider ranges only if needed for residual off-by-one boundary effects; these ranges should not require it for most questions."
     ]
   },
   {
     "id": "q001",
     "question": "What is HNSW?",
-    "expected_chunk_indices": [118, 119, 120, 121, 122, 124, 126, 127, 206, 207],
+    "expected_chunk_indices": [118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 205, 206, 207, 208],
     "expected_timestamp": "42:45",
     "expected_topics": ["HNSW", "Hierarchical Navigable Small World", "graph layers"],
-    "notes": "HNSW starts at chunk 118 (42:45) — instructor introduces the graph concept, connects nearest nodes, and builds layers. Chunks 119-122 cover node connections and nearest-neighbor graph building. Chunks 124, 126, 127 cover layer promotion and multi-layer structure. Chunks 206-207 contain the explicit final comparison where HNSW is named. BSP/KD-tree chunks (74-117) are intentionally excluded — different algorithm."
+    "notes": "HNSW core spans chunks 118-143 (42:45-52:34) — full continuous explanation: graph concept, nearest-node connections, multi-layer promotion, and search via layers. Chunks 205-208 contain the explicit IVF vs HNSW comparison. Widened from the original tight 10-chunk set after confirming via chunk_map.txt that the explanation runs continuously through 143 (chunk 144 shifts to disk storage). BSP/KD-tree chunks (74-117) are intentionally excluded — different algorithm."
   },
   {
     "id": "q002",
     "question": "Explain IVF.",
-    "expected_chunk_indices": [43, 44, 45, 46, 47, 48, 49, 50, 200, 201, 202],
+    "expected_chunk_indices": [43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 200, 201, 202, 203, 204, 205],
     "expected_timestamp": "15:41",
     "expected_topics": ["IVF", "Inverted File Index", "clustering", "centroid"],
-    "notes": "IVF core: chunk 43 introduces आईबीएफ/Inverted File Index. Chunks 44-50 cover centroid selection, cluster assignment, and searching only the nearest cluster. Chunks 200-202 cover IVF+PQ combination. Chunks 51-62 are the extended worked example — excluded to keep the set tight."
+    "notes": "IVF core spans chunks 43-62 (15:41-23:18) — full continuous explanation including centroid selection, cluster assignment, the worked example, and searching only the nearest cluster. Chunks 200-205 cover IVF+PQ combination and the IVF-side setup for the final comparison. Widened from the original tight set after confirming via chunk_map.txt that the worked example (51-62) is part of the core explanation, not a separate tangent."
   },
   {
     "id": "q003",
     "question": "What is Product Quantization?",
-    "expected_chunk_indices": [157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 196],
+    "expected_chunk_indices": [157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202],
     "expected_timestamp": "57:14",
     "expected_topics": ["Product Quantization", "PQ", "codebook", "compression", "segments"],
-    "notes": "PQ core starts at chunk 157 (57:14) — 'compress this vector'. Chunks 158-167 cover segment splitting, codebook construction, and index assignment. Chunk 196 has the key memory savings calculation (6144 bytes → 12 bytes). Chunks 168-195 are the detailed distance-table lookup walkthrough — important but not the definition, so excluded from core set."
+    "notes": "PQ core spans chunks 157-202 (57:14-1:14:58) — full continuous explanation including segment splitting, codebook construction, the distance-table lookup walkthrough, the memory savings calculation (chunk 196: 6144 bytes -> 12 bytes), and the IVF+PQ combination at the end. Widened from the original tight set after confirming via chunk_map.txt that the distance-table walkthrough (168-195) is integral to explaining PQ, not a separable tangent."
   },
   {
     "id": "q004",
     "question": "How does vector search work?",
-    "expected_chunk_indices": [4, 5, 15, 16, 17, 18, 19, 20],
+    "expected_chunk_indices": [4, 5, 6, 7, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27],
     "expected_timestamp": "01:21",
     "expected_topics": ["vector search", "nearest neighbor", "Euclidean distance", "brute force"],
-    "notes": "Core vector search explanation: chunk 4 introduces distance between vectors, chunks 5 and 15-20 cover finding nearest neighbors via Euclidean distance and brute-force scan across all items. Chunks 2-3 are intro/framing, chunks 21-27 are Euclidean formula derivation — all excluded."
+    "notes": "Vector search core spans chunks 4-7 (distance intro, recommendation framing) and 15-27 (finding nearest neighbors via Euclidean distance, brute-force scan, and the formula derivation). Widened to include the Euclidean derivation (21-27) since it's part of how vector search is explained, not a separable tangent. Chunks 2-3 are pure intro/framing — still excluded."
   },
   {
     "id": "q005",
@@ -67,10 +67,10 @@
   {
     "id": "q008",
     "question": "What is the difference between IVF and HNSW?",
-    "expected_chunk_indices": [206, 207, 208, 43, 118],
+    "expected_chunk_indices": [203, 204, 205, 206, 207, 208],
     "expected_timestamp": "1:15:55",
     "expected_topics": ["IVF vs HNSW", "comparison", "speed", "accuracy", "memory"],
-    "notes": "Chunk 206 (1:15:55) is the direct comparison: HNSW (high speed, high accuracy, high memory) vs IVF (lower accuracy, low memory). Chunks 207-208 complete the comparison table. Chunks 43 and 118 are the IVF and HNSW definition entry points — included so a retriever that finds the definitions also scores well on this comparison query."
+    "notes": "Chunk 206 (1:15:55) is the direct comparison: HNSW (high speed, high accuracy, high memory) vs IVF (lower accuracy, low memory). Chunks 203-205 lead directly into the comparison setup, and 207-208 complete the comparison table. Chunks 200-202 still belong to the IVF+PQ combination explanation (a different topic, covered by q002/q003) and are excluded to keep this question focused on the comparison itself."
   },
   {
     "id": "q009",

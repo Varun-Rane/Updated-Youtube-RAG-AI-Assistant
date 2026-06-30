@@ -172,20 +172,48 @@ def _render_timestamps(timestamps):
     st.markdown(timestamp_markup, unsafe_allow_html=True)
 
 
+def _chunk_value(chunk, key, default=None):
+    """Extract a metadata value from a dict, RerankedDoc, or plain Document."""
+    if isinstance(chunk, dict):
+        return chunk.get(key, default)
+    metadata = getattr(chunk, "metadata", {})
+    if metadata:
+        return metadata.get(key, default)
+    return default
+
+
+def _chunk_text(chunk):
+    """Extract display text from a dict, RerankedDoc, or plain Document."""
+    if isinstance(chunk, dict):
+        return chunk.get("text", "")
+    return getattr(chunk, "page_content", "")
+
+
 def _render_chunks(retrieved_chunks):
     if not retrieved_chunks:
         return
 
     st.markdown("#### 📄 Retrieved Transcript")
     for index, chunk in enumerate(retrieved_chunks, start=1):
-        title = chunk.get("video_title") or chunk.get("source_label") or "Video"
-        timestamp = chunk.get("timestamp", "00:00")
+        title = (
+            _chunk_value(chunk, "video_title")
+            or _chunk_value(chunk, "source_label")
+            or "Video"
+        )
+        timestamp = (
+            _chunk_value(chunk, "timestamp_range")
+            or _chunk_value(chunk, "timestamp")
+            or "00:00"
+        )
         with st.expander(f"Chunk {index} - {timestamp} - {title}", expanded=False):
-            st.markdown(f"**Source:** {chunk.get('source_label', 'Video')} - {title}")
+            st.markdown(
+                f"**Source:** {_chunk_value(chunk, 'source_label', 'Video')} - {title}"
+            )
             st.markdown(f"**Timestamp:** {timestamp}")
-            if chunk.get("video_url"):
-                st.markdown(f"**URL:** {chunk['video_url']}")
-            st.write(chunk.get("text", ""))
+            url = _chunk_value(chunk, "video_url")
+            if url:
+                st.markdown(f"**URL:** {url}")
+            st.write(_chunk_text(chunk))
 
 
 def render_answer_bundle(answer_bundle):

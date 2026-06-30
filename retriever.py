@@ -278,6 +278,7 @@ def retrieve_documents(retriever, question, settings) -> list:
 
     for term in terms:
         term_pairs = hybrid.retrieve_with_scores(term, top_k=fetch_k)
+        print(f"Retrieved {len(term_pairs)} candidates")
         for doc, scores in term_pairs:
             key = (doc.metadata.get("video_id", ""), doc.metadata.get("chunk_index", ""))
             if key in seen:
@@ -322,6 +323,7 @@ def retrieve_documents(retriever, question, settings) -> list:
         print(f"[dynamic_top_k] top_n={top_n}")
 
     reranked = reranker.rerank(question, raw_pairs, top_n=top_n)
+    print(f"Reranked: {len(reranked)}")
 
     if settings.debug_reranker:
         print(DIV)

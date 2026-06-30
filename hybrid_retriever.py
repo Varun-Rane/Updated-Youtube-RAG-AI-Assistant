@@ -3,6 +3,14 @@
 Combines BM25 lexical search with FAISS dense vector search and merges results
 via Reciprocal Rank Fusion (RRF).
 
+Default tuning (optimised for ~243-chunk corpora)
+----------------------------------------------------------------------
+BM25_TOP_K  = 243   # whole corpus — no artificial cap on lexical candidates
+DENSE_TOP_K =  50   # broader dense pool before fusion
+RRF_K       =  10   # low constant amplifies rank differences on small corpora
+                    # rank-1 score: 1/11=0.091 vs rank-20: 1/30=0.033 (3× gap)
+                    # (classic RRF_K=60 gives only ~31% gap over the same span)
+
 # FAISS score semantics
 ----------------------------------------------------------------------
 LangChain's ``similarity_search_with_score`` returns different values depending
@@ -54,11 +62,14 @@ _FILLER_WORDS = {
     "of", "to", "for", "with", "are", "was", "were",
 }
 
-
 def _tokenize(text: str) -> List[str]:
-    """Lowercase, strip punctuation, collapse whitespace, return token list."""
-    cleaned = re.sub(r"[^\w\s]", " ", text.lower())
-    return " ".join(cleaned.split()).split()
+    """Unicode-aware tokenizer that preserves Devanagari (Hindi) script.
+
+    Splits on whitespace and ASCII punctuation only — does NOT strip
+    Unicode word characters, so Hindi tokens survive intact.
+    """
+    cleaned = re.sub(r"[^\w\s]", " ", text, flags=re.UNICODE)
+    return cleaned.lower().split()
 
 
 def _normalise_query(query: str) -> str:
@@ -173,9 +184,9 @@ class HybridRetriever:
         self._score_mode: str = _detect_score_mode(self._vectorstore)
 
         # Tunable knobs.
-        self.bm25_top_k: int = getattr(settings, "bm25_top_k", 50)
-        self.dense_top_k: int = getattr(settings, "dense_top_k", 20)
-        self.rrf_k: int = getattr(settings, "rrf_k", 60)
+        self.bm25_top_k: int = getattr(settings, "bm25_top_k", 243)
+        self.dense_top_k: int = getattr(settings, "dense_top_k", 50)
+        self.rrf_k: int = getattr(settings, "rrf_k", 10)
         self.final_top_k: int = getattr(settings, "final_top_k", 20)
 
         # Threshold applies to *normalised* scores (always higher = better).
@@ -249,11 +260,18 @@ class HybridRetriever:
         q_tokens = _tokenize(normalised_query)  # consistent with document tokenisation
         scores = self._bm25.get_scores(q_tokens)
 
+        print("=" * 80)
+        print("BM25 DEBUG")
+        print("Query Tokens:", q_tokens)
+        print("Max BM25 Score:", max(scores))
+        print("Positive Docs:", sum(s > 0.05 for s in scores))
+        print("=" * 80)
+
         # Filter to positive scores only, then sort descending.
         ranked = [
             (i, float(scores[i]))
             for i in range(len(scores))
-            if scores[i] > 0
+            if scores[i] > 0.05
         ]
         ranked.sort(key=lambda x: x[1], reverse=True)
         ranked = ranked[: self.bm25_top_k]
@@ -276,6 +294,11 @@ class HybridRetriever:
             pairs = self._vectorstore.similarity_search_with_score(
                 raw_query, k=self.dense_top_k
             )
+
+            print("=" * 80)
+            print("FAISS DEBUG")
+            print("Returned Candidates:", len(pairs))
+            print("=" * 80)
         except Exception as exc:
             self._logger.error("Dense retrieval failed: %s", exc)
             return []
@@ -365,8 +388,17 @@ class HybridRetriever:
                     dense_score=s.get("dense_score"),
                     rrf_score=fused_score,
                 ))
-            if len(merged) >= self.final_top_k:
-                break
+        # NOTE: do NOT cap here — let _retrieve_internal slice to top_k so
+        # the caller always sees the full fused list up to bm25+dense pool size.
+
+        merged.sort(
+            key=lambda x: (
+                x.rrf_score,
+                x.dense_score if x.dense_score is not None else 0,
+                x.bm25_score if x.bm25_score is not None else 0,
+            ),
+            reverse=True,
+        )
 
         return merged
 

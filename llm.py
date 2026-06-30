@@ -42,16 +42,32 @@ def _cached_groq_chat_model(api_key, model, max_new_tokens, temperature):
 
 @lru_cache(maxsize=8)
 def _cached_endpoint_embeddings(api_key, embedding_model):
-    return HuggingFaceEndpointEmbeddings(
-        model=embedding_model,
-        huggingfacehub_api_token=api_key,
-    )
+    try:
+        return HuggingFaceEndpointEmbeddings(
+            model=embedding_model,
+            huggingfacehub_api_token=api_key,
+            encode_kwargs={
+                "normalize_embeddings": True,
+            },
+        )
+    except TypeError:
+        return HuggingFaceEndpointEmbeddings(
+            model=embedding_model,
+            huggingfacehub_api_token=api_key,
+        )
 
 
 @lru_cache(maxsize=8)
 def _cached_local_embeddings(embedding_model):
-    return HuggingFaceEmbeddings(model_name=embedding_model)
-
+    return HuggingFaceEmbeddings(
+        model_name=embedding_model,
+        model_kwargs={
+            "device": "cpu",
+        },
+        encode_kwargs={
+            "normalize_embeddings": True,
+        },
+    )
 
 def _chat_provider(settings):
     if settings.llm_provider == "auto":
