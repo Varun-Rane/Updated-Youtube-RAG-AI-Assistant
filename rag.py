@@ -2,10 +2,142 @@ from llm import invoke_text
 from prompts import RAG_PROMPT, VERIFY_PROMPT
 from retriever import (
     retrieve_documents,
-    format_retrieved_context,
     unique_sources,
     unique_timestamps,
 )
+
+
+def _chunk_position_key(doc):
+    """Best-effort ordering key for a document's position within its video."""
+    meta = doc.metadata
+    start = meta.get("start", meta.get("start_snippet"))
+    if start is None:
+        start = meta.get("chunk_index", 0)
+    return (meta.get("video_id", ""), start)
+
+
+def _are_adjacent(doc_a, doc_b):
+    """True if doc_a and doc_b are consecutive chunks from the same video.
+
+    Adjacency is judged by chunk_index (preferred, since it's a stable
+    integer position) and falls back to comparing start timestamps if
+    chunk_index is missing.
+    """
+    meta_a, meta_b = doc_a.metadata, doc_b.metadata
+    if meta_a.get("video_id", "") != meta_b.get("video_id", ""):
+        return False
+
+    idx_a = meta_a.get("chunk_index")
+    idx_b = meta_b.get("chunk_index")
+    if idx_a is not None and idx_b is not None:
+        return abs(idx_a - idx_b) == 1
+
+    # Fallback: treat as adjacent if their timestamp ranges touch closely.
+    start_a = meta_a.get("start", meta_a.get("start_snippet"))
+    end_a = meta_a.get("end_snippet", start_a)
+    start_b = meta_b.get("start", meta_b.get("start_snippet"))
+    if start_a is None or start_b is None or end_a is None:
+        return False
+    return abs(start_b - end_a) < 5  # within 5s = effectively adjacent
+
+
+def _group_adjacent_runs(documents):
+    """Group consecutive *reranker-ordered* documents into runs of adjacent chunks.
+
+    Does NOT reorder documents — only merges a chunk into the previous run if
+    it is immediately adjacent to it in the source video. This preserves the
+    reranker's relevance ordering (e.g. [20, 21, 19] stays as two runs:
+    [20, 21] then [19]) while still giving the LLM a clean, merged view of
+    consecutive chunks instead of presenting them as separate blocks.
+
+    Returns a list of runs, where each run is a list of one or more documents
+    in their original (reranker) relative order.
+    """
+    runs = []
+    for doc in documents:
+        if runs and _are_adjacent(runs[-1][-1], doc):
+            runs[-1].append(doc)
+        else:
+            runs.append([doc])
+
+    # Within a run, sort by position so e.g. [21, 20] (out-of-order adjacent
+    # hits) read in natural chunk order rather than reranker order.
+    for run in runs:
+        run.sort(key=_chunk_position_key)
+
+    return runs
+
+
+def _build_structured_context(documents, max_context_chars):
+    """Format retrieved chunks into a structured context block.
+
+    Preserves the reranker's relevance ordering across distinct topics —
+    documents are NOT globally re-sorted by timestamp. Only chunks that are
+    immediately adjacent in the source video are merged into a single block
+    (in their natural order), since merging adjacent text genuinely improves
+    readability without disturbing relevance ranking.
+
+    Example: reranker order [chunk20, chunk21, chunk19, chunk55] becomes:
+
+        Run 1 (chunk20, chunk21 — adjacent, merged in chunk order)
+        Run 2 (chunk19 — not adjacent to chunk21, separate run)
+        Run 3 (chunk55 — not adjacent to chunk19, separate run)
+
+        Video: ...
+        Timestamp: ...
+        <chunk20 + chunk21 merged>
+
+        --------------------
+
+        Video: ...
+        Timestamp: ...
+        <chunk19>
+
+        --------------------
+
+        Video: ...
+        Timestamp: ...
+        <chunk55>
+
+    Returns (context_string, retrieved_chunks) — retrieved_chunks is the
+    flattened list of documents actually included, in the order they appear
+    in the context, so downstream timestamp/source extraction stays
+    consistent with what the LLM actually saw.
+    """
+    runs = _group_adjacent_runs(documents)
+
+    blocks = []
+    included = []
+    used_chars = 0
+    separator = "\n\n" + ("-" * 20) + "\n\n"
+
+    for run in runs:
+        first_meta = run[0].metadata
+        video_title = first_meta.get("video_title", first_meta.get("source_label", "Unknown Video"))
+
+        if len(run) == 1:
+            timestamp = first_meta.get("timestamp_range", first_meta.get("timestamp", ""))
+        else:
+            start_ts = first_meta.get("timestamp_range", first_meta.get("timestamp", "")).split(" - ")[0]
+            last_meta = run[-1].metadata
+            end_ts = last_meta.get("timestamp_range", last_meta.get("timestamp", ""))
+            end_ts = end_ts.split(" - ")[-1] if end_ts else ""
+            timestamp = f"{start_ts} - {end_ts}" if start_ts and end_ts else start_ts or end_ts
+
+        merged_text = " ".join(doc.page_content.strip() for doc in run)
+        block = f"Video: {video_title}\nTimestamp: {timestamp}\n\n{merged_text}"
+
+        added_len = len(block) + (len(separator) if blocks else 0)
+        if used_chars + added_len > max_context_chars and blocks:
+            # Stop once the budget is hit, but always include at least one block.
+            break
+
+        blocks.append(block)
+        included.extend(run)
+        used_chars += added_len
+
+    context = separator.join(blocks)
+    return context, included
 
 
 def unavailable_bundle(message="I couldn't find this in the loaded video."):
@@ -159,7 +291,7 @@ def run_rag(question, retriever, videos, history, chat_model, settings):
             "retrieved_chunks": documents,
         }
 
-    context, retrieved_chunks = format_retrieved_context(
+    context, retrieved_chunks = _build_structured_context(
         documents, settings.max_context_chars
     )
 

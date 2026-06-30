@@ -51,7 +51,7 @@ def load_video_index(raw_urls, settings):
     for warning in warnings:
         st.warning(warning)
 
-def answer_question(question, settings, history_before):
+def answer_question(question, settings, history_before, mode="Auto"):
     # Validate API keys early
     provider = settings.llm_provider
 
@@ -63,18 +63,35 @@ def answer_question(question, settings, history_before):
 
     chat_model = get_chat_model(settings)
 
-    route = classify_query(
-        question=question,
-        chat_model=chat_model,
-        has_loaded_videos=bool(
-            st.session_state.get("retriever")
-        ),
-    )
+    # ------------------------------------------------------------------
+    # Determine the route. Auto uses the classifier; any other mode maps
+    # directly to its route, skipping the router call entirely. From this
+    # point on there is exactly ONE execution path — the dispatch chain
+    # below doesn't know or care whether `route` came from the classifier
+    # or from a manual mode selection.
+    # ------------------------------------------------------------------
+    _MODE_TO_ROUTE = {
+        "Video QA": "VIDEO_QA",
+        "General": "GENERAL",
+        "Memory": "MEMORY",
+    }
+
+    if mode == "Auto":
+        route = classify_query(
+            question=question,
+            chat_model=chat_model,
+            has_loaded_videos=bool(
+                st.session_state.get("retriever")
+            ),
+        )
+    else:
+        route = _MODE_TO_ROUTE.get(mode, "GENERAL")
 
     st.session_state.last_route = route
 
     print("=" * 60)
     print(f"QUESTION: {question}")
+    print(f"MODE: {mode}")
     print(f"ROUTE: {route}")
     print("=" * 60)
 
@@ -193,7 +210,7 @@ def _error_bundle(message):
     }
 
 
-def handle_question(question, settings):
+def handle_question(question, settings, mode="Auto"):
     history_before = list(st.session_state.messages)
 
     with st.chat_message("user"):
@@ -201,7 +218,7 @@ def handle_question(question, settings):
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            answer_bundle = answer_question(question, settings, history_before)
+            answer_bundle = answer_question(question, settings, history_before, mode=mode)
             render_answer_bundle(answer_bundle)
 
     st.session_state.messages.append({"role": "user", "content": question})
@@ -240,6 +257,17 @@ def main():
             st.error(f"Could not load transcripts: {exc}")
 
     render_loaded_videos(st.session_state.get("videos", []))
+
+    mode = st.selectbox(
+        "Mode",
+        options=["Auto", "Video QA", "General", "Memory"],
+        help=(
+            "Auto uses the router to pick the best handler for your question. "
+            "Video QA, General, and Memory skip the router and go straight to "
+            "that handler."
+        ),
+    )
+
     selected_prompt = render_quick_prompts()
     render_chat_history(st.session_state.messages)
 
@@ -247,7 +275,7 @@ def main():
     question = selected_prompt or typed_question
 
     if question:
-        handle_question(question, settings)
+        handle_question(question, settings, mode=mode)
 
 
 if __name__ == "__main__":

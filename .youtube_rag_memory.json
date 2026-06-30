@@ -22,5 +22,53 @@
   {
     "role": "assistant",
     "content": "## Answer\nHNSW is the best method. Its speed is very high. Accuracy is also very high. Memory usage is very high.\n\n## Evidence\n- Timestamp: 1:15:55 - 1:16:22\n- Transcript Fact: HNSW \u0938\u092c\u0938\u0947 \u092c\u0947\u0938\u094d\u091f \u0939\u0948\u0964 \u0907\u0938\u0915\u0940 \u0938\u094d\u092a\u0940\u0921 \u092c\u0939\u0941\u0924 \u0939\u0940 \u0939\u093e\u0908\u090f\u0938\u094d\u091f \u0939\u0948\u0964 \u090f\u0915\u094d\u092f\u0942\u0930\u0947\u0938\u0940 \u092c\u0939\u0941\u0924 \u0939\u093e\u0908\u090f\u0938\u094d\u091f \u0939\u0948\u0964 \u092e\u0947\u092e\u094b\u0930\u0940 \u092f\u0942\u091c\u0947\u091c \u092c\u0939\u0941\u0924 \u091c\u094d\u092f\u093e\u0926\u093e \u0939\u0948\u0964"
+  },
+  {
+    "role": "user",
+    "content": "What is IVF?"
+  },
+  {
+    "role": "assistant",
+    "content": "IVF, or In Vitro Fertilization, is a type of assisted reproductive technology (ART) used to help individuals or couples conceive a child. The process involves fertilizing an egg with sperm outside the body, in a laboratory dish.\n\nHere's a step-by-step overview of the IVF process:\n\n1. **Ovulation Induction**: Medications are given to stimulate the ovaries to produce multiple eggs.\n2. **Egg Retrieval**: Eggs are retrieved from the ovaries through a minor surgical procedure.\n3. **Sperm Collection**: A semen sample is collected from the male partner.\n4. **Fertilization**: The eggs are mixed with the sperm in a laboratory dish, and fertilization occurs.\n5. **Embryo Culture**: The fertilized eggs (embryos) are cultured in a laboratory for 3-5 days.\n6. **Embryo Transfer**: One or more embryos are transferred to the woman's uterus through a catheter.\n7. **Pregnancy Test**: A pregnancy test is performed to determine if the IVF cycle was successful.\n\nIVF is often recommended for individuals or couples with:\n\n* Infertility due to blocked fallopian tubes\n* Low sperm count or poor sperm quality\n* Endometriosis\n* Polycystic ovary syndrome (PCOS)\n* Unexplained infertility\n\nIVF has become a popular and effective treatment option for many individuals and couples struggling with infertility. However, it's essential to note that IVF is a complex process, and success rates vary depending on individual circumstances."
+  },
+  {
+    "role": "user",
+    "content": "What is IVF?"
+  },
+  {
+    "role": "assistant",
+    "content": "## Answer\nI couldn't find this in the loaded video."
+  },
+  {
+    "role": "user",
+    "content": "Who is the PM of India?"
+  },
+  {
+    "role": "assistant",
+    "content": "As of my knowledge cutoff in 2023, the Prime Minister of India is Narendra Modi. However, please note that this information may have changed since my knowledge cutoff date."
+  },
+  {
+    "role": "user",
+    "content": "what was my previous question "
+  },
+  {
+    "role": "assistant",
+    "content": "Unfortunately, this is the beginning of our conversation, and I don't have any record of your previous question. Each time you interact with me, it's a new conversation, and I don't retain any information from previous chats. If you'd like to ask a question, I'm here to help!"
+  },
+  {
+    "role": "user",
+    "content": "what was my previous question "
+  },
+  {
+    "role": "assistant",
+    "content": "what was my previous question"
+  },
+  {
+    "role": "user",
+    "content": "My favourite player is Virat Kohli"
+  },
+  {
+    "role": "assistant",
+    "content": "I couldn't find that in our conversation."
   }
 ]
